@@ -30,7 +30,7 @@ const uint8_t dymoHeader[] = {
    0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0, //media type, default
    0x1B, 0x68,
    0x1B, 0x6E, 1, 0,       //label index
-   0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0 //print data header (252 Zeilen x 272 pixel)
+   0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0 //print data header (252 rows x 272 pixel)
 };
 const uint8_t dymoFooter[] = {
    0x1B, 0x47,             //short line feed
@@ -115,33 +115,18 @@ void closeTcpConnection(int sockfd)
 
 int main(int argc, char * argv[])
 {
-//   printf("%d\n", (uint8_t)argv[1][0]);
-//   return -1;
-
    const GFXfont * const font = &FreeSans15pt7b;
    Bitmap * const bitmap = new Bitmap(272, 252, font);
 
-//   const char * line1 = "71404194, 01.06.83";
-//   bitmap->drawText((bitmap->width - textWidth)/2, font->yAdvance, line1); //centered
-
    //text
    bitmap->drawText(0, font->yAdvance, "7  2404394, 02.06.18");
-   //bitmap->drawText(0, 2*font->yAdvance, "Dimpfelmooser Karl-Heinz");
    bitmap->drawText(0, 2*font->yAdvance, "^A ^a ^O ^o ^U ^u Hei^s ^E"); //Umlaute, Scharfes-S, Euro
    bitmap->drawText(0, 3*font->yAdvance, "JUN, LG, Manns. 28");
    bitmap->drawText(0, 4*font->yAdvance, "Fest, Punkt #123.4");
    //ean8 barcode
    bitmap->drawBarcode(4*font->yAdvance + font->yAdvance/2, 2*font->yAdvance, 8263214);
 
-
-
-
-//   ofstream myFile ("data.bin", ios::out | ios::binary);
-//   myFile.write ((const char *)bitmap->data, bitmap->lengthByte);
-//   myFile.close();
-
-
-
+   //print
    int sockfd = createTcpConnection();
    uint8_t receiveBuffer[128];
    int status;
@@ -158,7 +143,6 @@ int main(int argc, char * argv[])
       cout << "Response received: " << status << endl;
 
 
-
       status = sendViaTcpConnection(sockfd, dymoHeader, sizeof(dymoHeader), MSG_MORE);
       cout << "Header sent: " << status << endl;
 
@@ -167,7 +151,6 @@ int main(int argc, char * argv[])
 
       status = sendViaTcpConnection(sockfd, dymoFooter, sizeof(dymoFooter));
       cout << "Footer status request sent: " << status << endl;
-
 
 
       status = receiveViaTcpConnection(sockfd, receiveBuffer, sizeof(receiveBuffer));

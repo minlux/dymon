@@ -39,7 +39,7 @@ The bits of the bitmap blob are mapped to label pixels row by row, column by col
 
 
 ## Protocol
-Example for printing a 252x272 bitmap to a 25mm X 25mm label with 300x300dpi.
+Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 1. Open TCP connection
 
@@ -58,7 +58,7 @@ Example for printing a 252x272 bitmap to a 25mm X 25mm label with 300x300dpi.
       5. `0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0` : Media/Paper-Type, 2 byte command, 8 byte value (8x0 ^= normal)
       6. `0x1B, 0x68` : Unknown 2 byte command
       7. `0x1B, 0x6E, 1, 0` : Label index, 2 byte command, 16-bit value (meaning of index unknown)
-      8. `0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0` : Bitmap spec, 2 byte command, 1 unknown byte, 32-bit bitmap width, 1 unknown byte, 32-bit bitmap height (width 252px = 0xFC ^= [0xFC, 0, 0, 0]; height 272px = 0x110 ^= [0x10, 0x01, 0, 0])
+      8. `0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0` : Bitmap spec, 2 byte command, 1 unknown byte, 32-bit bitmap height, 1 unknown byte, 32-bit bitmap width (height 252px = 0xFC ^= [0xFC, 0, 0, 0]; width 272px = 0x110 ^= [0x10, 0x01, 0, 0])
 
    2. Send bitmap "blob" (may be next packet with MSG_MORE)
 
