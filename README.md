@@ -78,7 +78,7 @@ Example for printing a 252x272 bitmap to a 25mm X 25mm label with 300x300dpi.
 > Label length is user for form feed. Its scale is 600dpi. In this example: 600 dots * 600 dpi = 1 inch = 25 mm.
 
 
-##Implementation
+## Implementation
 This command line tool for linux implements the the described application.
 
 However most of the application relates to the creation of the bitmap (text and barcode) but isn't realy in scope of this project. Scope of this project is the protocol and here is a demo implementation...
