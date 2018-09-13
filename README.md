@@ -71,6 +71,9 @@ Example for printing a 252x272 bitmap to a 25mm X 25mm label with 300x300dpi.
    1. `0x1B, 0x45` : Line feed, 2 byte command
    2. `0x1B, 0x51` : Line tab, 2 byte command
 
+6. Close TCP connection
+
+
 > Label length is user for form feed. Its scale is 600dpi. In this example: 600 dots * 600 dpi = 1 inch = 25 mm.
 
 
