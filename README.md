@@ -27,9 +27,9 @@ aren't described in this document.
 
 Each command starts with `0x1B` followed by a "command selector byte" and optional parameter data. These parameter are little endian encoded.
 
-The label itself is given by a bitmap "blob". In a preceeding header some meta information are defined. Among other things the width (number of columns) and height (number of rows) of the label - in pixels.
+The label itself is given by a bitmap "blob". In a preceeding header some meta information are defined. Among other things the width (number of columns) and height (number of rows) of the bitmap, the label length, print density, print quality...
 
-The bitmap-bytes are mapped to the label row by row, column by column.
+The bits of the bitmap blob are mapped to label pixels row by row, column by column (Z)
 * It starts in upper left corner with bit 7 of the first bitmap-byte. 
 * The next pixel (1st row, 2nd column) is followed by bit 6 ...
 * There is a wrap around at the end of each row ...  
