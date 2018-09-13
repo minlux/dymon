@@ -81,7 +81,15 @@ Example for printing a 252x272 bitmap to a 25mm X 25mm label with 300x300dpi.
 ## Implementation
 This command line tool for linux implements the the described application.
 
-However most of the application relates to the creation of the bitmap (text and barcode) but isn't realy in scope of this project. Scope of this project is the protocol and here is a demo implementation...
+However most of the application code relates to the creation of the bitmap (text and barcode) but isn't realy in scope of this project. All code related to the communictation with the label writer is done in *main.cpp*.
+
+## How to build
+Build process is based on CMake.
+ 
+1. Create a build directory (e.g. `mkdir build`)
+2. Within the build directory execute `cmake ..`
+3. Within the build directory execute `make`
+
 
 
 
