@@ -91,6 +91,29 @@ Build process is based on CMake.
 3. Within the build directory execute `make`
 
 
+## Usage
+This tool expects its input via 1st command line argument.
+This argument is expected to be a JSON object of the following format:
 
+```
+{
+  "lp":"127.0.0.1",
+  "format":2,
+  "lines":[
+    "first line text",
+    "second line",
+    "3rd",
+    "max 4 lines of text"
+  ],
+  "barcodes":[
+    1234567
+  ]
+}
+```
 
+Input shall be UTF8 encoded. However it does only support the ASCII chars and these special (german) chars "äÄöÖüÜß€".
+- *lp* is the IP address of the label printer in the local netowork.
+- *format* is currently not supported. It must be set, but it value is not evaluated.
+- *lines* the current implementation allows to print 4 text lines.
+- *barcodes* the current implementation allows to print 1 EAN8 bar code (max 7 digits. a checksum char is added automatically).
 
