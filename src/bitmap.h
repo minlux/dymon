@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "gfxfont.h"
 #include "glyphIterator.h"
+#include "utf8decoder.h"
 
 
 
@@ -27,7 +28,6 @@ public:
 
 private:
    void setPixelValue(const uint32_t pixel, const bool value);
-   static int getEscapedCharacter(int c);
 
 
    uint32_t widthByte;
@@ -35,6 +35,7 @@ private:
 
    const GFXfont * font;
    GlyphIterator * glyphIterator;
+   Utf8Decoder utf8;
 };
 
 

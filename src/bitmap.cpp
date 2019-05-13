@@ -57,29 +57,14 @@ int Bitmap::drawText(const uint32_t x, const uint32_t y, const char * text)
    uint32_t width;
    int character;
    bool status;
-   bool esc;
 
-   esc = false;
    width = 0;
    cursor = x;
-   while ((character = *text++) != 0)
+   while ((character = (uint8_t)(*text++)) != 0)
    {
-      //handle escaped sequence
-      if (esc) //previous char was escape char ...
-      {
-         esc = false;
-         character = getEscapedCharacter(character);
-      }
-      else
-      {
-         if (character == '^') //Escape character?
-         {
-            esc = true;
-            continue; //skip escape char
-         }
-      }
-
-      //only for ASCII chars in range 1 ..127 and the escaped onces. Others will be skipped!
+      //handle utf8 characters
+      character = utf8.decode(character);
+      //only for ASCII chars in range 1 ..127 and the suported UTF8 onces. Others will be skipped!
       if (character > 0)
       {
          const uint32_t origion = y * this->width + cursor;
@@ -180,38 +165,5 @@ void Bitmap::drawBarcode(const uint32_t y, const uint32_t height, const uint32_t
          this->data[line + j] = this->data[origion + j];
       }
    }
-}
-
-
-int Bitmap::getEscapedCharacter(int c)
-{
-   //Deutsche Umlaute und Euro-Zeichen ummappen:
-   //E (0x45) -> EURO (0x80)
-   //A (0x41) -> Ae (0x81)
-   //a (0x61) -> ae (0x82)
-   //O (0x4F) -> Oe (0x83)
-   //o (0x6F) -> oe (0x84)
-   //U (0x55) -> Ue (0x85)
-   //u (0x75) -> ue (0x86)
-   //s (0x73) -> sz (0x87)
-   static const uint8_t escCharacterMap[128] =
-   {
-   //        x0    x1    x2    x3    x4    x5    x6    x7    x8    x9    xA    xB    xC    xD    xE    xF
-   /* 0x */   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-   /* 1x */   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-   /* 2x */   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-   /* 3x */   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-   /* 4x */   0, 0x81,    0,    0,    0, 0x80,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0x83,
-   /* 5x */   0,    0,    0,    0,    0, 0x85,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
-   /* 6x */   0, 0x82,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0x84,
-   /* 7x */   0,    0,    0, 0x87,    0, 0x86,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0
-   };
-
-
-   if ((c >= 0) && (c <= 128))
-   {
-      return escCharacterMap[c];
-   }
-   return 0;
 }
 
