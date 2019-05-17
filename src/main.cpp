@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
             //Lable-Format
 //todo            const int labelFormat = format->valueint; //currently not supported
             const GFXfont * const font = &FreeSans15pt7b;
-            Bitmap * const bitmap = new Bitmap(272, 252, font);
+            Bitmap * const bitmap = new Bitmap(272, 252, font /*, Bitmap::Orientation::Vertically*/);
             uint32_t y = 0; //Y-coordinate of the bitmap
 
             //Text-Lines

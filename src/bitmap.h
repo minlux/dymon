@@ -11,11 +11,11 @@
 
 class Bitmap
 {
+public:
    enum Orientation
    {
-      Horizontally = 0 /*,
+      Horizontally = 0,
       Vertically
-      */ //vertical orientation not implemented yet!
    };
 
 public:
@@ -26,7 +26,8 @@ public:
 
    uint32_t getTextWidth(const char * text);
    int drawText(const uint32_t x, const uint32_t y, const char * text);
-   void drawBarcode(const uint32_t y, const uint32_t height, const uint32_t value); //will be printed centered
+   void drawBarcode(const uint32_t y, const uint32_t height, const uint32_t value,
+                    double scale = 1.0); //will be printed centered (set scale < 1 for smaller barcode width)
 
    uint32_t width;
    uint32_t height;
@@ -35,14 +36,15 @@ public:
    uint32_t lengthByte; //length in bytes
 
 private:
+   int32_t getPixelIndex(const uint32_t x, const uint32_t y); //return -1 in case of overflow
+   int32_t getPixelIndex(const uint32_t pixel, const int32_t xoff, const int32_t yoff); //return -1 in case of overflow
+   bool getPixelValue(const uint32_t pixel);
    void setPixelValue(const uint32_t pixel, const bool value);
-   int32_t getOrigin(const uint32_t x, const uint32_t y); //return -1 in case of overflow
-   int32_t getPixel(const uint32_t origin, const uint32_t xoff, const uint32_t yoff); //return -1 in case of overflow
    void duplicateLineDown(const uint32_t y, const uint32_t times = 1); //duplicate the line of y-coordinate n-times downdards
 
    enum Orientation orientation;
    uint32_t widthByte;
-   uint32_t length; //length in bits
+   int32_t length; //length in bits
 
    const GFXfont * font;
    GlyphIterator * glyphIterator;
