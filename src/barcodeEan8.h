@@ -11,7 +11,8 @@
 class BarcodeEan8
 {
 public:
-   static uint32_t intToBarcode(const uint32_t value, uint8_t barcode[7]);
+   //value: max 7 decimal digits. a 8th checksum digit will be added automatically!
+   static uint32_t intToBarcode(const uint32_t value, uint8_t barcode[9]);
 
 private:
    BarcodeEan8(); //shall not be instantiated

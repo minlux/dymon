@@ -1,3 +1,12 @@
+/*
+   Command line based print tool for DYMO LabelWriter Wireless.
+   Contains protocol description to interface with DYMO LabelWriter Wireless.
+
+   Compile and build the programm using *cmake*.
+   Invoke from command line, like this:
+
+   ./dymon '{"lp":"192.168.178.49","format":2,"lines":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm","","Z4"],"barcodes":[7531234]}'
+*/
 #include <stdint.h>
 #include <iostream>
 #include <fstream>
@@ -167,33 +176,32 @@ int main(int argc, char * argv[])
 //todo            const int labelFormat = format->valueint; //currently not supported
             const GFXfont * const font = &FreeSans15pt7b;
             Bitmap * const bitmap = new Bitmap(272, 252, font);
+            uint32_t y = 0; //Y-coordinate of the bitmap
 
             //Text-Lines
             cJSON * lines = cJSON_GetObjectItemCaseSensitive(json, "lines");
             cJSON * line;
-            int i = 1;
             cJSON_ArrayForEach(line, lines)
             {
                if (cJSON_IsString(line))
                {
-                  bitmap->drawText(0, i * font->yAdvance, line->valuestring);
-                  ++i;
+                  y += font->yAdvance; //text is bottom based. so i have to pre-increment Y by the line height
+                  bitmap->drawText(0, y, line->valuestring);
                }
             }
             //Barcodes
             cJSON * barcodes = cJSON_GetObjectItemCaseSensitive(json, "barcodes");
             cJSON * barcode;
-            //currently only 1 barcode-line supported
-            barcode = cJSON_GetArrayItem(barcodes, 0);
+            cJSON_ArrayForEach(barcode, barcodes)
             {
                if (cJSON_IsNumber(barcode))
                {
                   //ean8 barcode
-                  bitmap->drawBarcode(4*font->yAdvance + font->yAdvance/2, 2*font->yAdvance, barcode->valueint);
+                  y += font->yAdvance / 2; //add "margin" of 0.5 lines to previous text/barcode
+                  bitmap->drawBarcode(y, 2*font->yAdvance, barcode->valueint);
+                  y += 2 * font->yAdvance; //add height of barcode to y-coordinate
                }
             }
-
-
 
 
             //print

@@ -1,4 +1,6 @@
 # dymon
+Command line based print tool for DYMO LabelWriter Wireless.
+Contains protocol description to interface with DYMO LabelWriter Wireless.
 
 ## Intro
 2018 I bought DYMO's new wireless label printer (*LabelWriter Wireless*). I had the idea to print labels out of an (web)application
@@ -103,7 +105,7 @@ This argument is expected to be a JSON object of the following format:
     "first line text",
     "second line",
     "3rd",
-    "max 4 lines of text"
+    "4th line of text"
   ],
   "barcodes":[
     1234567
@@ -116,4 +118,10 @@ Input shall be UTF8 encoded. However it does only support the ASCII chars and th
 - *format* is currently not supported. It must be set, but it value is not evaluated.
 - *lines* the current implementation allows to print 4 text lines.
 - *barcodes* the current implementation allows to print 1 EAN8 bar code (max 7 digits. a checksum char is added automatically).
+
+Example:
+```
+./dymon '{"lp":"192.168.178.49","format":2,"lines":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm","","Z4"],"barcodes":[97531234]}'
+```
+
 
