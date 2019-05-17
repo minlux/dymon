@@ -5,7 +5,7 @@
    Compile and build the programm using *cmake*.
    Invoke from command line, like this:
 
-   ./dymon '{"lp":"192.168.178.49","format":2,"lines":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm","","Z4"],"barcodes":[7531234]}'
+   ./dymon '{"lp":"192.168.178.49","format":2,"title":"Überschrift","body":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm"],"barcode":7531234}'
 */
 #include <stdint.h>
 #include <iostream>
@@ -174,12 +174,24 @@ int main(int argc, char * argv[])
          {
             //Lable-Format
 //todo            const int labelFormat = format->valueint; //currently not supported
-            const GFXfont * const font = &FreeSans15pt7b;
-            Bitmap * const bitmap = new Bitmap(272, 252, font /*, Bitmap::Orientation::Vertically*/);
+            Bitmap * const bitmap = new Bitmap(272, 252 /*, Bitmap::Orientation::Vertically*/);
+            const GFXfont * font;
             uint32_t y = 0; //Y-coordinate of the bitmap
 
-            //Text-Lines
-            cJSON * lines = cJSON_GetObjectItemCaseSensitive(json, "lines");
+            //Title (Headline)
+            font = &FreeSans15pt7b; //todo - use bigger font
+            bitmap->setFont(font);
+            cJSON * title = cJSON_GetObjectItemCaseSensitive(json, "title");
+            if (cJSON_IsString(title))
+            {
+               y += font->yAdvance; //text is bottom based. so i have to pre-increment Y by the line height
+               bitmap->drawText(0, y, title->valuestring);
+            }
+
+            //Body-Lines
+            font = &FreeSans15pt7b;
+            bitmap->setFont(font);
+            cJSON * lines = cJSON_GetObjectItemCaseSensitive(json, "body");
             cJSON * line;
             cJSON_ArrayForEach(line, lines)
             {
@@ -189,18 +201,14 @@ int main(int argc, char * argv[])
                   bitmap->drawText(0, y, line->valuestring);
                }
             }
-            //Barcodes
-            cJSON * barcodes = cJSON_GetObjectItemCaseSensitive(json, "barcodes");
-            cJSON * barcode;
-            cJSON_ArrayForEach(barcode, barcodes)
+            //Barcode
+            cJSON * barcode = cJSON_GetObjectItemCaseSensitive(json, "barcode");
+            if (cJSON_IsNumber(barcode))
             {
-               if (cJSON_IsNumber(barcode))
-               {
-                  //ean8 barcode
-                  y += font->yAdvance / 2; //add "margin" of 0.5 lines to previous text/barcode
-                  bitmap->drawBarcode(y, 2*font->yAdvance, barcode->valueint);
-                  y += 2 * font->yAdvance; //add height of barcode to y-coordinate
-               }
+               //ean8 barcode
+               y += font->yAdvance / 2; //add "margin" of 0.5 lines to previous text/barcode
+               bitmap->drawBarcode(y, 2*font->yAdvance, barcode->valueint, 1.0); //zentriert auf die ganze Breite
+               //y += 2 * font->yAdvance; //add height of barcode to y-coordinate
             }
 
 

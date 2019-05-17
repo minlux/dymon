@@ -101,15 +101,14 @@ This argument is expected to be a JSON object of the following format:
 {
   "lp":"127.0.0.1",
   "format":2,
-  "lines":[
+  "title":"todo"
+  "body":[
     "first line text",
     "second line",
     "3rd",
     "4th line of text"
   ],
-  "barcodes":[
-    1234567
-  ]
+  "barcode":1234567
 }
 ```
 
@@ -121,7 +120,7 @@ Input shall be UTF8 encoded. However it does only support the ASCII chars and th
 
 Example:
 ```
-./dymon '{"lp":"192.168.178.49","format":2,"lines":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm","","Z4"],"barcodes":[97531234]}'
+./dymon '{"lp":"192.168.178.49","format":2,"title":"Überschrift","body":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm"],"barcode":7531234}'
 ```
 
 

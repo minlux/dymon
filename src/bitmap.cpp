@@ -3,8 +3,8 @@
 
 
 
-Bitmap::Bitmap(const uint32_t width, const uint32_t height, const GFXfont * const font,
-               enum Orientation orientation)
+Bitmap::Bitmap(const uint32_t width, const uint32_t height, enum Orientation orientation,
+               const GFXfont * const font)
 {
    //assert((width % 8) == 0); //width shall be a multiple of 8
    //set bitmap properties
@@ -39,6 +39,11 @@ uint32_t Bitmap::getTextWidth(const char * text)
    char character;
    uint32_t width;
 
+   if (this->font == nullptr)
+   {
+      return 0;
+   }
+
    width = 0;
    while ((character = *text++) != 0)
    {
@@ -58,6 +63,11 @@ int Bitmap::drawText(const uint32_t x, const uint32_t y, const char * text)
    uint32_t width;
    int character;
    bool status;
+
+   if (this->font == nullptr)
+   {
+      return -1;
+   }
 
    width = 0;
    cursor = x;

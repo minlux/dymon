@@ -19,8 +19,8 @@ public:
    };
 
 public:
-   Bitmap(const uint32_t width, const uint32_t height, const GFXfont * const font,
-          enum Orientation orientation = Orientation::Horizontally);
+   Bitmap(const uint32_t width, const uint32_t height, enum Orientation orientation = Orientation::Horizontally,
+          const GFXfont * const font = nullptr);
 
    void setFont(const GFXfont * const font);
 
