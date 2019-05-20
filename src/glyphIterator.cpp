@@ -4,6 +4,10 @@
 
 GlyphIterator::GlyphIterator()
 {
+   font = nullptr;
+   glyph = nullptr;
+   pixel = 0;
+   length = 0;
 }
 
 
@@ -17,6 +21,8 @@ bool GlyphIterator::init(const GFXfont * font, int character)
    //character supported or not?
    if ((character < font->first) || (character > font->last))
    {
+      pixel = 0;
+      length = 0;
       return 0;
    }
 

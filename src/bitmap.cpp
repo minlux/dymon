@@ -1,3 +1,4 @@
+#include <cstring>
 #include "bitmap.h"
 #include "barcodeEan8.h"
 
@@ -19,18 +20,31 @@ Bitmap::Bitmap(const uint32_t width, const uint32_t height, enum Orientation ori
    //set default text font
    this->font = font;
 
-   //allocate buffer for bitmap
+   //allocate buffer for bitmap (and clear it to zero)
    this->data = new uint8_t[this->lengthByte];
+   memset(this->data, 0, this->lengthByte);
 
    //create glyph iterator
    this->glyphIterator = new GlyphIterator();
 }
 
 
+Bitmap::~Bitmap()
+{
+   delete glyphIterator;
+   delete[] data;
+}
+
 
 void Bitmap::setFont(const GFXfont * const font)
 {
    this->font = font;
+}
+
+
+void Bitmap::setOrientation(enum Orientation orientation)
+{
+   this->orientation = orientation;
 }
 
 
@@ -266,6 +280,7 @@ void Bitmap::setPixelValue(const uint32_t pixel, const bool value)
 //duplicate the line of y-coordinate n-times downdards
 void Bitmap::duplicateLineDown(const uint32_t y, const uint32_t times)
 {
+#if 1
    if (orientation == Orientation::Horizontally)
    {
       //for horizontal orientation, this operation can be done very efficient just coping bytes
@@ -273,16 +288,23 @@ void Bitmap::duplicateLineDown(const uint32_t y, const uint32_t times)
       for (uint32_t i = 1; i <= times; ++i)
       {
          uint32_t line = i*this->widthByte + origin;
-         for (uint32_t j = 0; j < this->widthByte; ++j)
+         if (line + this->widthByte <= this->lengthByte) //preven buffer overflow
          {
-            this->data[line + j] = this->data[origin + j];
+            for (uint32_t j = 0; j < this->widthByte; ++j)
+            {
+               this->data[line + j] = this->data[origin + j];
+            }
+            continue;
          }
+         break;
       }
    }
    else //Vertically
+#endif
    {
       //for vertical orientation, this must be done plain... (pixel by pixel)
-      for (uint32_t x = 0; x < this->height; ++x)
+      uint32_t xend = (orientation == Orientation::Horizontally) ? this->width : this->height; //but can also be done for horizontal orientation
+      for (uint32_t x = 0; x < xend; ++x)
       {
          uint32_t sourcePixel = getPixelIndex(x, y);
          bool value = getPixelValue(sourcePixel);

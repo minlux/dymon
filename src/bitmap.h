@@ -21,14 +21,17 @@ public:
 public:
    Bitmap(const uint32_t width, const uint32_t height, enum Orientation orientation = Orientation::Horizontally,
           const GFXfont * const font = nullptr);
+   ~Bitmap();
 
    void setFont(const GFXfont * const font);
+   void setOrientation(enum Orientation orientation);
 
-   uint32_t getTextWidth(const char * text);
-   int drawText(const uint32_t x, const uint32_t y, const char * text);
+   uint32_t getTextWidth(const char * text); //font must be set first!!!
+   int drawText(const uint32_t x, const uint32_t y, const char * text); //font must be set first!!!
    void drawBarcode(const uint32_t y, const uint32_t height, const uint32_t value,
                     double scale = 1.0); //will be printed centered (set scale < 1 for smaller barcode width)
 
+/*readonly*/
    uint32_t width;
    uint32_t height;
 
