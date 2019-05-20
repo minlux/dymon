@@ -82,8 +82,11 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 ## Implementation
 This command line tool for linux implements the described application.
+However most of the application code relates to the creation of the bitmap (text and barcode).
+The actual code to interface with the *LabelWriter* can be found in class *Dymon* in *dymon.cpp*.
+(*Dymon* is an abstact class. There is a specialization for Windows and one for Linux. Those child classes
+only handles the TCP network access.)
 
-However most of the application code relates to the creation of the bitmap (text and barcode) but isn't realy in scope of this project. All code related to the communictation with the label writer is done in *main.cpp*.
 
 ## How to build
 Build process is based on CMake.
@@ -94,33 +97,17 @@ Build process is based on CMake.
 
 
 ## Usage
-This tool expects its input via 1st command line argument.
+This tool expects its input via command line argument:
+- 1st argument: the IP of the *LabelWriter* in the local network
+- 2nd argument: the labels *title* line
+- 3rd/4th argument: label *body* lines
+- 5th argument: EAN8 barcode value (max 7 digits. a checksum char is added automatically).
 This argument is expected to be a JSON object of the following format:
 
-```
-{
-  "lp":"127.0.0.1",
-  "format":2,
-  "title":"todo"
-  "body":[
-    "first line text",
-    "second line",
-    "3rd",
-    "4th line of text"
-  ],
-  "barcode":1234567
-}
-```
-
-Input shall be UTF8 encoded. However it does only support the ASCII chars and these special (german) chars "äÄöÖüÜß€".
-- *lp* is the IP address of the label printer in the local netowork.
-- *format* is currently not supported. It must be set, but it value is not evaluated.
-- *lines* the current implementation allows to print 4 text lines.
-- *barcodes* the current implementation allows to print 1 EAN8 bar code (max 7 digits. a checksum char is added automatically).
 
 Example:
 ```
-./dymon '{"lp":"192.168.178.49","format":2,"title":"Überschrift","body":["Hallo äÄöÖüÜß€","Zeile 23456789abcdefghijklm"],"barcode":7531234}'
+./dymon "192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
 ```
 
 
