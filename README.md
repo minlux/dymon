@@ -55,7 +55,7 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
    1. Set "header data" of label to be print (may be one packet with MSG_MORE)
       1. `0x1B, 0x41, 1, 0, 0, 0` : Counter, 2 byte command, 32-bit value (meaning of counter unknown)
       2. `0x1B, 0x43, 0x64` : Print-Density, 2 byte command, 1 byte value (0x64 ^= normal)
-      3. `0x1B, 0x4C, 0x58, 0x02` Label-Length, 2 byte command, 16-bit value (600 ^= 0x258 ^= [0x58, 0x02])
+      3. `0x1B, 0x4C, 0x58, 0x02` Label-Length in 1/600 inch, 2 byte command, 16-bit value (e.g 1 inch ^= 600 ^= 0x258 ^= [0x58, 0x02])
       4. `0x1B, 0x43` : Printer quality (300x300 dpi)
       5. `0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0` : Media/Paper-Type, 2 byte command, 8 byte value (8x0 ^= normal)
       6. `0x1B, 0x68` : Unknown 2 byte command
