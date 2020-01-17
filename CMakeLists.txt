@@ -23,8 +23,18 @@ add_executable(dymon_cli
    src/main_dymon_cli.cpp
 )
 
+#print bitmap-files from command line
+add_executable(dymon_bmp
+   src/bitmap/bitmap.cpp
+   src/bitmap/glyphIterator.cpp
+   src/bitmap/utf8decoder.cpp
+   src/barcode/barcodeEan8.cpp
+   src/dymon/dymon.cpp
+   src/dymon/dymon_linux.cpp
+   src/main_dymon_bmp.cpp
+)
 
-#webserver
+#printserver/webserver
 add_executable(dymon_srv
    libs/cjson/cJSON.c
    src/bitmap/bitmap.cpp

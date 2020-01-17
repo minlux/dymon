@@ -116,6 +116,22 @@ Example:
 ./dymon_cli "192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
 ```
 
+
+### dymon_bmp
+`dymon_bmp` is a command line tool, that allows to print a raw binary bitmap file on the *LabelWriter*.
+The tool expects the following arguments:
+- 1st argument: the IP of the *LabelWriter* in the local network
+- 2nd argument: the bitmap width in pixels (resolution will be 300dpi)
+- 3rd argument: the bitmap height in pixels (resolution will be 300dpi)
+- 4th argument: label length in millimeter
+- 5th argument: full path to the bitmap file
+
+Example to print to a 25mm x 25mm label, which has a width of 272pixel, a height of 252pixel and a lenght of 25.4mm:
+```
+./dymon_bmp 192.168.178.23 272 252 25.4 ../doc/label.bmp
+```
+
+
 ### dymon_srv
 `dymon_srv` implements a HTTP-webserver. It TCP port, the webserver is listening to can be set with the first command line argument (default: 8092).
 Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).

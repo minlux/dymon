@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
    if (argc < 6)
    {
       cout << "Usage:" <<endl;
-      cout << "./dymon <ip-of-labelwriter> <title> <line1> <line2> <barcode>" << endl;
+      cout << "./dymon_cli <ip-of-labelwriter> <title> <line1> <line2> <barcode>" << endl;
       return -1;
    }
 
