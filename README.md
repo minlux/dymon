@@ -1,6 +1,10 @@
 # dymon
-Command line based print tool for DYMO LabelWriter Wireless.
-Contains protocol description to interface with DYMO LabelWriter Wireless.
+Command line tool and printserver (webserver) for DYMO LabelWriter Wireless.
+Furthermore this project contains protocol description to interface with DYMO LabelWriter Wireless.
+
+`dymon_srv` implements a webserver, that allows printing of labels through a REST-API. In addition it serves a site (which is using this REST-API) that allows label printing from by a web form:
+![dymon_srv](doc/webif.png)
+
 
 ## Intro
 2018 I bought DYMO's new wireless label printer (*LabelWriter Wireless*). I had the idea to print labels out of an (web)application
@@ -81,11 +85,14 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 
 ## Implementation
-This command line tool for linux implements the described application.
-However most of the application code relates to the creation of the bitmap (text and barcode).
-The actual code to interface with the *LabelWriter* can be found in class *Dymon* in *dymon.cpp*.
-(*Dymon* is an abstact class. There is a specialization for Windows and one for Linux. Those child classes
-only handles the TCP network access.)
+This porject implements to applications. One application is a command line tool the other is a webserver. Both applications allows to print labels on a DYMO LabelWrite Wireless.
+
+Most of the application code relates to the creation of the bitmap (text and barcode). The actual code to interface with the *LabelWriter* can be found in the files in folder `dymon` and in `src/print.cpp`.
+
+## Notes
+- *Dymon* is an abstact class. There is a specialization for Windows and one for Linux. Those child classes only handles the TCP network access.
+- To change the oriantation of the label, the bitmap must be rotated. The bitmap class in this project demostrates this.
+- To get an idea how to change the label size/format have a look into `src/print.cpp`. There is an implementation for two different label formats with different orientation.
 
 
 ## How to build
@@ -97,17 +104,26 @@ Build process is based on CMake.
 
 
 ## Usage
-This tool expects its input via command line argument:
+### dymon_cli
+The `dymon_cli` tool expects its input via command line argument:
 - 1st argument: the IP of the *LabelWriter* in the local network
 - 2nd argument: the labels *title* line
 - 3rd/4th argument: label *body* lines
 - 5th argument: EAN8 barcode value (max 7 digits. a checksum char is added automatically).
-This argument is expected to be a JSON object of the following format:
-
 
 Example:
 ```
-./dymon "192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
+./dymon_cli "192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
 ```
 
+### dymon_srv
+`dymon_srv` implements a HTTP-webserver. It TCP port, the webserver is listening to can be set with the first command line argument (default: 8092).
+Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).
+
+Example:
+```
+./dymon_srv 8092
+```
+
+![dymon_srv](doc/webif.png)
 
