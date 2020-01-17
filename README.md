@@ -5,6 +5,8 @@ Furthermore this project contains protocol description to interface with DYMO La
 `dymon_srv` implements a webserver, that allows printing of labels through a REST-API. In addition it serves a site (which is using this REST-API) that allows label printing from by a web form:
 ![dymon_srv](doc/webif.png)
 
+`dymon_cli` and `dymon_bmp` allows printing of labels from command line.
+
 
 ## Intro
 2018 I bought DYMO's new wireless label printer (*LabelWriter Wireless*). I had the idea to print labels out of an (web)application
