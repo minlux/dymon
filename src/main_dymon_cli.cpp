@@ -49,7 +49,12 @@ int main(int argc, char * argv[])
 #endif
 
    //print label
-   int error = dymon.print(&bitmap, 25.4, argv[1]);
+   int error = dymon.start(argv[1]); //connect to labelwriter
+   if (error == 0)
+   {
+      dymon.print(&bitmap, 25.4);
+      dymon.end(); //finalize printing (form-feed) and close socket
+   }
    return error;
 }
 

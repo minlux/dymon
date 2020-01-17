@@ -2,8 +2,8 @@
 #include <winsock2.h>
 #include "dymon.h"
 
-#define _CONNECT_TIMEOUT_1SEC    (2)      //2 seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1MS   (1000)   //1000 milli seconds send/receive timeout
+#define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
+#define _SEND_RECV_TIMEOUT_1MS   (3000)   //milli seconds send/receive timeout
 
 
 //This is just a helper class.
@@ -67,7 +67,7 @@ bool DymonWin32::connect(const char * host, const uint16_t port)
    FD_SET(sock, &writeSet);
 
    // check if the socket is ready
-   select(0, nullptr, &writeSet, nullptr, &connectTimeout);
+   select(sock + 1, nullptr, &writeSet, nullptr, &connectTimeout);
    if (FD_ISSET(sock, &writeSet))
    {
       sockfd = (int)sock;

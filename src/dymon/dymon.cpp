@@ -1,4 +1,5 @@
 #include <cstring>
+// #include <iostream>
 #include "dymon.h"
 
 
@@ -16,7 +17,7 @@ const uint8_t Dymon::_header[] = {
    0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0, //media type, default
    0x1B, 0x68,
    0x1B, 0x6E, 1, 0,       //label index
-   0x1B, 0x44, 0x01, 0x02, 
+   0x1B, 0x44, 0x01, 0x02,
    0, 0, 0, 0,             //label height in pixel (32-bit little endian)
    0, 0, 0, 0              //label width in pixel (32-bit little endian). shall be a multiple of 8!
 };
@@ -33,32 +34,56 @@ const uint8_t Dymon::_final[] = {
 
 
 
+
+int Dymon::start(const char * host, uint16_t port)
+{
+   uint8_t receiveBuffer[128];
+   int status;
+
+   //check host address
+   if (host == nullptr)
+   {
+      return -1;
+   }
+   //create TCP socket and connect to LabelWriter
+   status = this->connect(host, port);
+   if (status == 0)
+   {
+      return -2;
+   }
+   //request LabelWriter status
+   status = this->send(_initial, sizeof(_initial));
+   if (status <= 0)
+   {
+      return -3;
+   }
+   status = this->receive(receiveBuffer, sizeof(receiveBuffer));
+   if (status <= 0)
+   {
+      return -4;
+   }
+   //success
+   return 0;
+}
+
+
+
 //bitmap resolution is assumed to be 300dpi
-int Dymon::print(const Bitmap * bitmap, double labelLength1mm, const char * host, uint16_t port)
+int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
 {
    uint8_t receiveBuffer[128];
    int status;
    int error = 0;
 
+
    //parameter check
-   if ((bitmap == nullptr) || (labelLength1mm <= 0) || (host == nullptr))
+   if ((bitmap == nullptr) || (labelLength1mm <= 0))
    {
       return -1;
    }
 
-   //create TCP socket
    do
    {
-      //connect to LabelWriter
-      status = this->connect(host, port);
-      if (status == false) { error = -2; break; }
-
-      //request LabelWriter status
-      status = this->send(_initial, sizeof(_initial));
-      if (status <= 0) { error = -3; break; }
-      status = this->receive(receiveBuffer, sizeof(receiveBuffer));
-      if (status <= 0) { error = -4; break; }
-
       //send label information in header
       uint8_t labelHeader[sizeof(_header)];
       memcpy(labelHeader, _header, sizeof(_header)); //make a modifiable copy of the header
@@ -66,12 +91,12 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm, const char * host
       uint32_t labelLength = (uint32_t)(((600.0 * labelLength1mm) / 25.4) + 0.5); //label length is based on 600 dots per inch
       labelHeader[11] = (uint8_t)labelLength;
       labelHeader[12] = (uint8_t)(labelLength >> 8);
-      //set bitmap height 
+      //set bitmap height
       labelHeader[35] = (uint8_t)bitmap->height;
       labelHeader[36] = (uint8_t)(bitmap->height >> 8);
       labelHeader[37] = (uint8_t)(bitmap->height >> 16);
       labelHeader[38] = (uint8_t)(bitmap->height >> 24);
-      //set bitmap width 
+      //set bitmap width
       labelHeader[39] = (uint8_t)bitmap->width;
       labelHeader[40] = (uint8_t)(bitmap->width >> 8);
       labelHeader[41] = (uint8_t)(bitmap->width >> 16);
@@ -88,15 +113,16 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm, const char * host
       if (status <= 0) { error = -3; break; }
       status = this->receive(receiveBuffer, sizeof(receiveBuffer));
       if (status <= 0) { error = -4; break; }
-
-      //send final form-feed command data
-      status = this->send(_final, sizeof(_final));
-      if (status <= 0) { error = -3; break; }
    } while (false);
-   
-
-   //close socket
-   this->close();
    return error;
 }
 
+
+
+void Dymon::end()
+{
+   //send final form-feed command data
+   this->send(_final, sizeof(_final));
+   //close socket
+   this->close();
+}
