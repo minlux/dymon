@@ -118,7 +118,7 @@ Example:
 
 
 ### dymon_bmp
-`dymon_bmp` is a command line tool, that allows to print a raw binary bitmap file on the *LabelWriter*.
+`dymon_bmp` is a command line tool, that allows to print a 1-bit bitmap file (binary blob) on the *LabelWriter*.
 The tool expects the following arguments:
 - 1st argument: the IP of the *LabelWriter* in the local network
 - 2nd argument: the bitmap width in pixels (resolution will be 300dpi)
