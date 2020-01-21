@@ -23,34 +23,21 @@ int main(int argc, char * argv[])
    int32_t bitmapHeight;
    double labelLength;
 
-   if (argc < 6)
+   if (argc < 3)
    {
       cout << "Usage:" <<endl;
-      cout << "./dymon_bmp <ip-of-labelwriter> <bitmap-width> <bitmap-height> <label-length> <bitmap-file>" << endl;
-      cout << " Bitmap width and height has to be given in pixel with a resolution of 300dpi" << endl;
-      cout << " Label length has to be given in mm" << endl;
+      cout << "./dymon_bmp <ip-of-labelwriter> <bitmap-file>" << endl;
       return -1;
    }
 
 
    //check if file exists
-   bitmapFile = argv[5];
+   bitmapFile = argv[2];
    if (!file_exist(bitmapFile))
    {
       cout << "File " << bitmapFile << " does not exist!" << endl;
       return -2;
    }
-
-   //get geometry parameters
-   bitmapWidth = atoi(argv[2]);
-   bitmapHeight = atoi(argv[3]);
-   labelLength = atof(argv[4]);
-   if ((bitmapWidth <= 0) || (bitmapHeight <= 0) || (labelLength <= 0))
-   {
-      cout << "Invalid geometry parameter of the label. Width, height and length must be positive numbers!" << endl;
-      return -3;
-   }
-
 
 #ifdef _WIN32
    DymonWin32 dymon;
@@ -63,7 +50,7 @@ int main(int argc, char * argv[])
    int error = dymon.start(ipAddress); //connect to labelwriter
    if (error == 0)
    {
-      dymon.print_bitmap(bitmapFile, bitmapWidth, bitmapHeight, labelLength);
+      dymon.print_bitmap(bitmapFile);
       dymon.end(); //finalize printing (form-feed) and close socket
    }
    return error;

@@ -1,11 +1,14 @@
 # dymon
-Command line tool and printserver (webserver) for DYMO LabelWriter Wireless.
-Furthermore this project contains protocol description to interface with DYMO LabelWriter Wireless.
+Command line tools and printserver (webserver) for DYMO LabelWriter Wireless.
 
-`dymon_srv` implements a webserver, that allows printing of labels through a REST-API. In addition it serves a site (which is using this REST-API) that allows label printing from by a web form:
+![dymon_srv](doc/lw.jpg)
+
+This project implements 3 applications:
+- `dymon_cli` and `dymon_pmb` allows printing of labels from command line.
+- `dymon_srv` implements a webserver, that allows printing of labels through a REST-API. In addition it serves a site (which is using this REST-API) that allows label printing from by a web form:
+
 ![dymon_srv](doc/webif.png)
 
-`dymon_cli` and `dymon_bmp` allows printing of labels from command line.
 
 
 ## Intro
@@ -85,6 +88,7 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 > Label length is user for form feed. Its scale is 600dpi. In this example: 600 dots * 600 dpi = 1 inch = 25 mm.
 
+> The bitmap blob seems to match the *pbm P4* format (see https://en.wikipedia.org/wiki/Netpbm_format)
 
 ## Implementation
 This porject implements to applications. One application is a command line tool the other is a webserver. Both applications allows to print labels on a DYMO LabelWrite Wireless.
@@ -119,19 +123,31 @@ Example:
 ```
 
 
-### dymon_bmp
-`dymon_bmp` is a command line tool, that allows to print a 1-bit bitmap file (binary blob) on the *LabelWriter*.
+### dymon_pmb
+`dymon_pmb` is a command line tool, that allows to print *pmb P4* image files. on the *LabelWriter*.
 The tool expects the following arguments:
 - 1st argument: the IP of the *LabelWriter* in the local network
-- 2nd argument: the bitmap width in pixels (resolution will be 300dpi)
-- 3rd argument: the bitmap height in pixels (resolution will be 300dpi)
-- 4th argument: label length in millimeter
-- 5th argument: full path to the bitmap file
+- 2th argument: full path to the bitmap file
 
-Example to print to a 25mm x 25mm label, which has a width of 272pixel, a height of 252pixel and a lenght of 25.4mm:
+In folder `doc` you can find some example files that can be printed (on the respective lables) like this:
 ```
-./dymon_bmp 192.168.178.23 272 252 25.4 ../doc/label.bmp
+./dymon_pmb 192.168.178.23 ../doc/label_25x25.pbm
+./dymon_pmb 192.168.178.23 ../doc/manu_25x25.pbm
+./dymon_pmb 192.168.178.23 ../doc/eagle_25x25.pbm
+./dymon_pmb 192.168.178.23 ../doc/eagle_36x89.pbm
 ```
+
+You can use *GIMP* to convert regular image files into pmb files. Therefore just *export* your image as `filename.pbm` and store it as *raw* pmb.
+You can also use *Imagemagick* to convert a file into pmb. For example:
+```
+convert your_pic.jpg your_pic.pbm
+```
+
+You can also do more advanced conversion at once using *Imagemagick's convert*. The following command resizes an image but keeps the aspect ration. It will be resized so that the width is maximal 960 pixel, the height is maximal 400 pixel. It depends on the geometry of the input image which rule applies. Then it extends the canvas to 960x400 and aligns the image centered in the canvas. Then the image is rotated by 90 degrees (counter clockwise). Finally it is converted to pbm p4. The resulting image would fit to a 36mm x 89mm label.
+```
+convert -resize 960x400 -extent 960x400 -gravity center -rotate 90 eagle.jpg eagle_36x89.pbm
+```
+
 
 
 ### dymon_srv

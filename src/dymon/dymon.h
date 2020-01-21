@@ -10,7 +10,7 @@ class Dymon
 public:
    int start(const char * host, uint16_t port = 9100); //create TCP socket and connect to LabelWriter
    int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
-   int print_bitmap(const char * filepath, const uint32_t width, const uint32_t height, double labelLength1mm); //print bitmap from file to label
+   int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
 
 private:
