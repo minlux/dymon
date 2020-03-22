@@ -160,6 +160,7 @@ static void m_print_thread()
 
 static void m_print_labels(cJSON * labels)
 {
+   static uint32_t session = 1;
    cJSON * label;
    void * prt;
 
@@ -168,13 +169,14 @@ static void m_print_labels(cJSON * labels)
    prt = nullptr;
    cJSON_ArrayForEach(label, labels)
    {
-      prt = print_json_start(label);
+      prt = print_json_start(label, session);
       break;
    }
 
    //start printing the labels (all labels will be printed by the LabelWriter given by the IP of the first label)
    if (prt != nullptr) //connected to LabelWriter?
    {
+      session++;
       cJSON_ArrayForEach(label, labels)
       {
          //print requested label

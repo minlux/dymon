@@ -14,7 +14,7 @@
 class Dymon
 {
 public:
-   Dymon() { index = 0; ipv4 = 0; }
+   Dymon(uint32_t session) { this->session = session, index = 0; ipv4 = 0; }
    int start(const char * host, uint16_t port = 9100); //create TCP socket and connect to LabelWriter
    int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
@@ -40,6 +40,7 @@ private:
    static const uint8_t _labelFeed[];
    static const uint8_t _labelStatus[];
    static const uint8_t _final[];
+   uint32_t session;
    uint16_t index;
 protected:
    uint32_t ipv4; //ipV4 internet address we are connected to (0 if not connected!)
@@ -51,7 +52,7 @@ protected:
 class  DymonWin32 : public Dymon
 {
 public:
-   DymonWin32() { sockfd = -1; };
+   DymonWin32(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!
@@ -73,7 +74,7 @@ private:
 class  DymonLinux : public Dymon
 {
 public:
-   DymonLinux() { sockfd = -1; };
+   DymonLinux(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!

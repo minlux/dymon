@@ -62,7 +62,7 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
    Either one big packet or multible packets with (all packets but the last) MSG_MORE flag set.
 
    1. Set "header data" of label to be print (may be one packet with MSG_MORE)
-      1. `0x1B, 0x41, 1, 0, 0, 0` : Counter, 2 byte command, 32-bit value (meaning of counter unknown)
+      1. `0x1B, 0x73, 1, 0, 0, 0` : Session-Counter, 2 byte command, 32-bit value (meaning of counter unknown)
       2. `0x1B, 0x43, 0x64` : Print-Density, 2 byte command, 1 byte value (0x64 ^= normal)
       3. `0x1B, 0x4C, 0x58, 0x02` Label-Length in 1/600 inch, 2 byte command, 16-bit value (e.g 1 inch ^= 600 ^= 0x258 ^= [0x58, 0x02])
       4. `0x1B, 0x43` : Printer quality (300x300 dpi)
@@ -89,6 +89,22 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 > Label length is user for form feed. Its scale is 600dpi. In this example: 600 dots * 600 dpi = 1 inch = 25 mm.
 
 > The bitmap blob seems to match the *pbm P4* format (see https://en.wikipedia.org/wiki/Netpbm_format)
+
+
+### Status Feedback
+The meaning of the 32 status bytes read back from the printer are not realy decoded yet. However in byte[15] there seems to be the "paper out" information. If papter is present, this bit is 0. If paper is out, this byte is 1.
+When requesting the status with `0x1B, 0x41, 1` then in byte[0] stands a 0. When requesting the status with `0x1B, 0x41, 0` then in byte[0] stands a 1.
+In the bytes[1..4] there seems to be the session-counter from the request (cf 3.1.1). Kann aber nur zum "vorschein" wenn man mehrere Labels druckt. Und zwar erst ab dem 2ten Status Request mit `0x1B, 0x41, 0` (also nach dem drucken des 2ten Label). Anfangs kommt immer 4x 0. Nach dem Ende des druckens kommt auch wieder 4x 0, wenn man z.B. noch ein paar  `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request hinterher schickt.
+In the bytes[5..6] there seems to be the label-index-counter from the request (cf. 3.1.7). Hier ist es ählich wie beim Session-Counter. Hier kommt der Wert zurück, den man im Vorherigen Request gesetzt hat. Das gilt aber nicht, für das erste `0x1B, 0x41, 1` und das erst `0x1B, 0x41, 0`. Da kommt dann noch der Wert den man Vorletzen Request gemacht hat. Nach dem Ende des Drucks kann man zuletzt gesetzen Counter Wert auch beliebig oft abrufen (indem man `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request schickt).
+Dieses "komische" Verhalten, hat bestimmt mit Byte[7] zu tun. Dieses Byte ist beim ersten `0x1B, 0x41, 1` und beim ersten `0x1B, 0x41, 0` immer 0. Wenn man mehrere Labels druckt, ist dieses Byte ab den 2ten `0x1B, 0x41, 0` dann 1. Schickt man nach dem Ende `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request, bleibe dies Byte auf 1. Das könnte also so eine Art "letzter Job completed" flag sein. Oder (und das erscheint mir jetzt, während ich drüber nachdenkte fast plausibler) ist es ein Idle-Flag das anzeigt ob der Drucker druckt oder nicht. Beim ersten `0x1B, 0x41, 1` ist der Drucker ja noch *Idle*. Nach dem senden des ersten Labels und dem anschließenden `0x1B, 0x41, 0` ist der Drucker auch noch Idle, weil das ganze "sooooo schnell" ging und der Drucker noch garnicht angefangen hat...
+Die anderen Status Bytes:
+- Byte[10]: Immer 0x08
+- Byte[20]: Immer 0x01
+- Byte[21]: Immer 0x01
+- Byte[27]: Immer 0x02
+- Byte[28]: Immer 0x02
+- alle nicht genannten: Immer 0x00
+
 
 ## Implementation
 This porject implements to applications. One application is a command line tool the other is a webserver. Both applications allows to print labels on a DYMO LabelWrite Wireless.

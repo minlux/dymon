@@ -7,6 +7,7 @@
 
 /* -- Includes ------------------------------------------------------------ */
 #include <stdint.h>
+#include <iostream>
 #include "gfxfont.h"
 #include "FreeSans15pt7b.h"
 #include "FreeSans18pt7b.h"
@@ -18,7 +19,6 @@
 
 /* -- Defines ------------------------------------------------------------- */
 #define NUM_LABEL_FORMATS     (2)      //currently i support only 2 different label formats
-
 
 
 using namespace std;
@@ -60,7 +60,7 @@ static const LabelFormat_t m_LableFormat[NUM_LABEL_FORMATS] =
       "ip":"127.0.0.1"
    }
 */
-void * print_json_start(cJSON * json)
+void * print_json_start(cJSON * json, uint32_t session)
 {
    if (cJSON_IsObject(json))
    {
@@ -68,9 +68,9 @@ void * print_json_start(cJSON * json)
       if (cJSON_IsString(ip))
       {
       #ifdef _WIN32
-         DymonWin32 * dymon = new DymonWin32;
+         DymonWin32 * dymon = new DymonWin32(session);
       #else //Linux assumed
-         DymonLinux * dymon = new DymonLinux;
+         DymonLinux * dymon = new DymonLinux(session);
       #endif
          const char * printerIp = ip->valuestring;
          int status = dymon->start(printerIp); //connect to a DYMO at the given IP
@@ -78,6 +78,9 @@ void * print_json_start(cJSON * json)
          {
             return dymon;
          }
+#ifdef DYMON_DEBUG
+         std::cout << "Dymon::start() error " << status << std::endl;
+#endif
          delete dymon;
       }
    }
@@ -168,6 +171,9 @@ int print_json_do(cJSON * json, void * prt)
 
             //print label
             error = ((Dymon *)prt)->print(&bitmap, lf->labelLength);
+#ifdef DYMON_DEBUG
+            if (error < 0) std::cout << "Dymon::print() error " << error << std::endl;
+#endif
          }
       }
    }

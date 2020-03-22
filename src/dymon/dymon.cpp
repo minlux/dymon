@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <cstring>
-// #include <iostream>
+#include <iostream>
 #include "dymon.h"
+
 
 //helper functions
 static int getFileContent(const char * filename, uint8_t * buffer, size_t bufferSize); //read file
@@ -12,9 +13,10 @@ const uint8_t Dymon::_status[] = {
    0x1B, 0x41, 1           //status request
 };
 
+#define CONFIGURATION_OFFSET_SESSION         (2)
 #define CONFIGURATION_OFFSET_LABEL_LENGTH    (11) //label length must be patched int bytes [11,12]
 const uint8_t Dymon::_configuration[] = {
-   0x1B, 0x73, 1, 0, 0, 0, //counter
+   0x1B, 0x73, 1, 0, 0, 0, //counter (session)
    0x1B, 0x43, 0x64,       //print density "normal"
    0x1B, 0x4C,             //label length...
    0, 0,                   //...given as multiple of 1/600 inch. (e.g. 600 ^= 600 * 1/600 inch = 1 inch) (16-bit little endian)
@@ -50,6 +52,18 @@ const uint8_t Dymon::_final[] = {
 };
 
 
+//Hexdump of the 32 Status bytes returned from printer
+static void log_status(int i, const uint8_t * status, uint32_t count)
+{
+   static const char * const hex = "0123456789ABCDEF";
+   std::cout << "Status" << i << " (" << count << "): ";
+   for (uint32_t j = 0; j < count; ++j)
+   {
+      std::cout << hex[(status[j] >> 4)] << hex[(status[j] & 0xF)] << " ";
+   }
+   std::cout << std::endl;
+}
+
 
 
 int Dymon::start(const char * host, uint16_t port)
@@ -75,10 +89,14 @@ int Dymon::start(const char * host, uint16_t port)
       return -3;
    }
    status = this->receive(receiveBuffer, sizeof(receiveBuffer));
+   // if (receiveBuffer[15] == 1) -> papier ist alle!!! TODO
    if (status <= 0)
    {
       return -4;
    }
+#ifdef DYMON_DEBUG
+   log_status(0, receiveBuffer, status);
+#endif
    //success
    index = 0;
    return 0;
@@ -96,12 +114,12 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    //parameter check
    if (bitmap == nullptr)
    {
-      return -1;
+      return -10;
    }
    const uint16_t length = (uint16_t)(((600.0 * labelLength1mm) / 25.4) + 0.5); //calculate label length in 600dpi unit
    if (length == 0)
    {
-      return -2;
+      return -11;
    }
 
 
@@ -111,10 +129,14 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    {
       //send label configuration (includes the label length)
       memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
+      buffer[CONFIGURATION_OFFSET_SESSION] = (uint8_t)this->session;
+      buffer[CONFIGURATION_OFFSET_SESSION + 1] = (uint8_t)(this->session >> 8);
+      buffer[CONFIGURATION_OFFSET_SESSION + 2] = (uint8_t)(this->session >> 16);
+      buffer[CONFIGURATION_OFFSET_SESSION + 3] = (uint8_t)(this->session >> 24);
       buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
       buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
       status = this->send(buffer, sizeof(_configuration));
-      if (status <= 0) return -3;
+      if (status <= 0) return -12;
       this->index = 1;
       sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
    }
@@ -125,7 +147,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
    buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
    status = this->send(buffer, sizeof(_labelIndex));
-   if (status <= 0) return -3;
+   if (status <= 0) return -13;
    this->index++; //preset for the next
    sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
 
@@ -153,7 +175,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
       {
          //send chunk
          status = this->send(buffer, sizeof(buffer));
-         if (status <= 0) return -3;
+         if (status <= 0) return -14;
          offset = 0;
       }
       //copy bitmap byte into buffer
@@ -164,7 +186,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    {
       //send chunk
       status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -3;
+      if (status <= 0) return -15;
       offset = 0;
    }
    buffer[offset++] = _labelFeed[0];
@@ -172,20 +194,24 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    {
       //send chunk
       status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -3;
+      if (status <= 0) return -16;
       offset = 0;
    }
    buffer[offset++] = _labelFeed[1];
    status = this->send(buffer, offset);
-   if (status <= 0) return -3;
+   if (status <= 0) return -17;
    sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
 
 
    //request LabelWriter status
    status = this->send(_labelStatus, sizeof(_labelStatus));
-   if (status <= 0) return -3;
+   if (status <= 0) return -18;
    status = this->receive(buffer, sizeof(buffer));
-   if (status <= 0) return -4;
+   // if (buffer[15] == 1) -> papier ist alle!!! TODO
+   if (status <= 0) return -19;
+#ifdef DYMON_DEBUG
+   log_status(1, buffer, status);
+#endif
 
 
    //success
@@ -203,13 +229,13 @@ int Dymon::print_bitmap(const char * file)
    uint32_t dataOffset = parsePortableBitmapP4(file, &height, &width);
    if (dataOffset == 0)
    {
-      return -1; //input file invalid
+      return -20; //input file invalid
    }
    //header parsed successfully
    const uint16_t length = (uint16_t)(2uL * height); //label length is based on 600 dots per inch (whereas width and height are 300dpi)
    if (length == 0)
    {
-      return -2;
+      return -21;
    }
 
    uint8_t buffer[1460]; //this it the (typical) maximal payload size of a tcp packet.
@@ -220,10 +246,14 @@ int Dymon::print_bitmap(const char * file)
    {
       //send label configuration (includes the label length)
       memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
+      buffer[CONFIGURATION_OFFSET_SESSION] = (uint8_t)this->session;
+      buffer[CONFIGURATION_OFFSET_SESSION + 1] = (uint8_t)(this->session >> 8);
+      buffer[CONFIGURATION_OFFSET_SESSION + 2] = (uint8_t)(this->session >> 16);
+      buffer[CONFIGURATION_OFFSET_SESSION + 3] = (uint8_t)(this->session >> 24);
       buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
       buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
       status = this->send(buffer, sizeof(_configuration));
-      if (status <= 0) return -3;
+      if (status <= 0) return -22;
       this->index = 1;
       sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
    }
@@ -233,7 +263,7 @@ int Dymon::print_bitmap(const char * file)
    buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
    buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
    status = this->send(buffer, sizeof(_labelIndex));
-   if (status <= 0) return -3;
+   if (status <= 0) return -23;
    this->index++; //preset for the next
    sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
 
@@ -268,7 +298,7 @@ int Dymon::print_bitmap(const char * file)
          if (status <= 0)
          {
             fclose(f);
-            return -3;
+            return -24;
          }
          offset = 0;
       }
@@ -280,20 +310,21 @@ int Dymon::print_bitmap(const char * file)
    {
       //send chunk
       status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -3;
+      if (status <= 0) return -25;
       offset = 0;
    }
    buffer[offset++] = _labelFeed[1];
    status = this->send(buffer, offset);
-   if (status <= 0) return -3;
+   if (status <= 0) return -26;
    sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
 
 
    //request LabelWriter status
    status = this->send(_labelStatus, sizeof(_labelStatus));
-   if (status <= 0) return -3;
+   if (status <= 0) return -27;
    status = this->receive(buffer, sizeof(buffer));
-   if (status <= 0) return -4;
+   // if (buffer[15] == 1) -> papier ist alle!!! TODO
+   if (status <= 0) return -28;
 
    //success
    return 0;
