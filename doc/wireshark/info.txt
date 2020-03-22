@@ -1,0 +1,2 @@
+Dymo hatte die IP 192.168.178.23 während des Wireshark-Trace
+--> Wireshark filter: ip.addr == 192.168.178.23
