@@ -2,8 +2,8 @@
 #include <winsock2.h>
 #include "dymon.h"
 
-#define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1MS   (3000)   //milli seconds send/receive timeout
+#define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
+#define _SEND_RECV_TIMEOUT_1MS   (10000)   //milli seconds send/receive timeout
 
 
 //This is just a helper class.
@@ -45,7 +45,8 @@ bool DymonWin32::connect(const char * host, const uint16_t port)
 
    //start connecting to host
    struct sockaddr_in address;  /* the libc network address data structure */
-   address.sin_addr.s_addr = inet_addr(host); /* assign the address */
+   uint32_t addr = inet_addr(host); //convert string representation of IP address (decimals and dots) to binary;
+   address.sin_addr.s_addr = addr; /* assign the address */
    address.sin_port = htons(port);            /* translate int2port num */
    address.sin_family = AF_INET;
    ::connect(sock, (struct sockaddr *)&address, sizeof(address));
@@ -70,7 +71,8 @@ bool DymonWin32::connect(const char * host, const uint16_t port)
    select(sock + 1, nullptr, &writeSet, nullptr, &connectTimeout);
    if (FD_ISSET(sock, &writeSet))
    {
-      sockfd = (int)sock;
+      this->sockfd = (int)sock;
+      this->ipv4 = addr;
       return true;
    }
 
@@ -108,4 +110,19 @@ void DymonWin32::close()
 {
    closesocket(sockfd);
    sockfd = -1;
+   ipv4 = 0;
+}
+
+
+void DymonWin32::sleep1ms(uint32_t millis)
+{
+   Sleep(millis);
+}
+
+
+uint32_t DymonWin32::inetAddr(const char * host)
+{
+   uint32_t addr = inet_addr(host);
+   if (((int32_t)addr) == -1) addr = 0; //in case off error, set it to 0
+   return addr;
 }

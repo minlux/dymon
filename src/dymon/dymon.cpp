@@ -3,30 +3,44 @@
 // #include <iostream>
 #include "dymon.h"
 
-//helper function to get read file
-static int getFileContent(const char * filename, uint8_t * buffer, size_t bufferSize);
+//helper functions
+static int getFileContent(const char * filename, uint8_t * buffer, size_t bufferSize); //read file
+static uint32_t parsePortableBitmapP4(const char * file, uint32_t * h, uint32_t * w);
 
 
-const uint8_t Dymon::_initial[] = {
+const uint8_t Dymon::_status[] = {
    0x1B, 0x41, 1           //status request
 };
 
-const uint8_t Dymon::_header[] = {
+#define CONFIGURATION_OFFSET_LABEL_LENGTH    (11) //label length must be patched int bytes [11,12]
+const uint8_t Dymon::_configuration[] = {
    0x1B, 0x73, 1, 0, 0, 0, //counter
    0x1B, 0x43, 0x64,       //print density "normal"
    0x1B, 0x4C,             //label length...
    0, 0,                   //...given as multiple of 1/600 inch. (e.g. 600 ^= 600 * 1/600 inch = 1 inch) (16-bit little endian)
    0x1B, 0x68,             //print quality, 300x300dpi
    0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0, //media type, default
-   0x1B, 0x68,
+   0x1B, 0x68
+};
+
+#define LABEL_INDEX_OFFSET    (2) //label index must be patched int bytes [2,3]
+const uint8_t Dymon::_labelIndex[] = {
    0x1B, 0x6E, 1, 0,       //label index
+};
+
+#define LABEL_HEIGHT_OFFSET    (4) //label height must be patched int bytes [4..7]
+#define LABEL_WIDTH_OFFSET     (8) //label height must be patched int bytes [8..11]
+const uint8_t Dymon::_labelHeightWidth[] = { //must be prefixed to the labels bitmap blob
    0x1B, 0x44, 0x01, 0x02,
    0, 0, 0, 0,             //label height in pixel (32-bit little endian)
    0, 0, 0, 0              //label width in pixel (32-bit little endian). shall be a multiple of 8!
 };
 
-const uint8_t Dymon::_footer[] = {
+const uint8_t Dymon::_labelFeed[] = { //must be suffixed to the labels bitmap blob (because _labelHeightWidth+bitmap+_labelLineFeed must be sent in one unit)
    0x1B, 0x47,             //short line feed
+};
+
+const uint8_t Dymon::_labelStatus[] = {
    0x1B, 0x41, 0           //status request
 };
 
@@ -55,7 +69,7 @@ int Dymon::start(const char * host, uint16_t port)
       return -2;
    }
    //request LabelWriter status
-   status = this->send(_initial, sizeof(_initial));
+   status = this->send(_status, sizeof(_status));
    if (status <= 0)
    {
       return -3;
@@ -66,6 +80,7 @@ int Dymon::start(const char * host, uint16_t port)
       return -4;
    }
    //success
+   index = 0;
    return 0;
 }
 
@@ -74,179 +89,214 @@ int Dymon::start(const char * host, uint16_t port)
 //bitmap resolution is assumed to be 300dpi
 int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
 {
-   uint8_t receiveBuffer[128];
+   uint8_t buffer[1460]; //this it the (typical) maximal payload size of a tcp packet.
    int status;
-   int error = 0;
 
 
    //parameter check
-   if ((bitmap == nullptr) || (labelLength1mm <= 0))
+   if (bitmap == nullptr)
    {
       return -1;
    }
-
-   do
+   const uint16_t length = (uint16_t)(((600.0 * labelLength1mm) / 25.4) + 0.5); //calculate label length in 600dpi unit
+   if (length == 0)
    {
-      //send label information in header
-      uint8_t labelHeader[sizeof(_header)];
-      memcpy(labelHeader, _header, sizeof(_header)); //make a modifiable copy of the header
-      //set label length
-      uint32_t labelLength = (uint32_t)(((600.0 * labelLength1mm) / 25.4) + 0.5); //label length is based on 600 dots per inch
-      labelHeader[11] = (uint8_t)labelLength;
-      labelHeader[12] = (uint8_t)(labelLength >> 8);
-      //set bitmap height
-      labelHeader[35] = (uint8_t)bitmap->height;
-      labelHeader[36] = (uint8_t)(bitmap->height >> 8);
-      labelHeader[37] = (uint8_t)(bitmap->height >> 16);
-      labelHeader[38] = (uint8_t)(bitmap->height >> 24);
-      //set bitmap width
-      labelHeader[39] = (uint8_t)bitmap->width;
-      labelHeader[40] = (uint8_t)(bitmap->width >> 8);
-      labelHeader[41] = (uint8_t)(bitmap->width >> 16);
-      labelHeader[42] = (uint8_t)(bitmap->width >> 24);
-      status = this->send(labelHeader, sizeof(labelHeader), true);
-      if (status <= 0) { error = -3; break; }
+      return -2;
+   }
 
-      //send bitmap data
-      status = this->send(bitmap->data, bitmap->lengthByte, true);
-      if (status <= 0) { error = -3; break; }
 
-      //send label footer + status request
-      status = this->send(_footer, sizeof(_footer));
-      if (status <= 0) { error = -3; break; }
-      status = this->receive(receiveBuffer, sizeof(receiveBuffer));
-      if (status <= 0) { error = -4; break; }
-   } while (false);
-   return error;
+   //for the first label (after call to start) we have to send the configuration (like the label length, print density, print quality, media type...)
+   //for all further labels we assume that these values doesn't change!!!
+   if (this->index == 0)
+   {
+      //send label configuration (includes the label length)
+      memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
+      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
+      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
+      status = this->send(buffer, sizeof(_configuration));
+      if (status <= 0) return -3;
+      this->index = 1;
+      sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+   }
+
+
+   //send label index
+   memcpy(buffer, _labelIndex, sizeof(_labelIndex)); //make a modifiable copy
+   buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
+   buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
+   status = this->send(buffer, sizeof(_labelIndex));
+   if (status <= 0) return -3;
+   this->index++; //preset for the next
+   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+
+
+   //send the label bitmap
+   //the bitmap has to be sent as one blob with an header and an footer
+   //for a performant implementation, i am sending in chunks of 1460 bytes, which is exactly the max. payload size of a TCP package
+   //setup the header (contains bitmap height, width)
+   memcpy(buffer, _labelHeightWidth, sizeof(_labelHeightWidth));
+   //set bitmap height
+   buffer[LABEL_HEIGHT_OFFSET] = (uint8_t)bitmap->height;
+   buffer[LABEL_HEIGHT_OFFSET + 1] = (uint8_t)(bitmap->height >> 8);
+   buffer[LABEL_HEIGHT_OFFSET + 2] = (uint8_t)(bitmap->height >> 16);
+   buffer[LABEL_HEIGHT_OFFSET + 3] = (uint8_t)(bitmap->height >> 24);
+   //set bitmap width
+   buffer[LABEL_WIDTH_OFFSET] = (uint8_t)bitmap->width;
+   buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(bitmap->width >> 8);
+   buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(bitmap->width >> 16);
+   buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(bitmap->width >> 24);
+   //concat the bitmap data
+   uint32_t offset = sizeof(_labelHeightWidth);
+   for (uint32_t count = 0; count < bitmap->lengthByte; ++count)
+   {
+      if (offset >= sizeof(buffer)) //buffer full
+      {
+         //send chunk
+         status = this->send(buffer, sizeof(buffer));
+         if (status <= 0) return -3;
+         offset = 0;
+      }
+      //copy bitmap byte into buffer
+      buffer[offset++] = bitmap->data[count];
+   }
+   //send the remaining data (+ footer)
+   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
+   {
+      //send chunk
+      status = this->send(buffer, sizeof(buffer));
+      if (status <= 0) return -3;
+      offset = 0;
+   }
+   buffer[offset++] = _labelFeed[0];
+   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
+   {
+      //send chunk
+      status = this->send(buffer, sizeof(buffer));
+      if (status <= 0) return -3;
+      offset = 0;
+   }
+   buffer[offset++] = _labelFeed[1];
+   status = this->send(buffer, offset);
+   if (status <= 0) return -3;
+   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+
+
+   //request LabelWriter status
+   status = this->send(_labelStatus, sizeof(_labelStatus));
+   if (status <= 0) return -3;
+   status = this->receive(buffer, sizeof(buffer));
+   if (status <= 0) return -4;
+
+
+   //success
+   return 0;
 }
 
 
 
 int Dymon::print_bitmap(const char * file)
 {
-   uint8_t bitmapBuffer[32*1024]; //32kB Buffer
-   uint8_t receiveBuffer[128];
    int status;
-   int error;
-
-   //get (1st bunch of) bitmap from file
-   FILE * f = fopen(file, "r"); //caller has already ensured, that the file exists!
-   size_t count = fread(bitmapBuffer, sizeof(uint8_t), sizeof(bitmapBuffer), f);
-
-   error = -1; //preset error code to "input file invalid"
-   //parse the data for the expected image format (based on the magic number) and the image width and height
-   uint32_t dataOffset = 0;
-   uint32_t width = 0;
-   uint32_t height = 0;
-   while (count > 7) //at least 7 bytes ("P4" + \n + width + space + height + \n)
+   //parse the bitmap file
+   uint32_t height;
+   uint32_t width;
+   uint32_t dataOffset = parsePortableBitmapP4(file, &height, &width);
+   if (dataOffset == 0)
    {
-      uint32_t i = 0;
-      //magic number + newline. skip if the are not as expected!
-      if (bitmapBuffer[i++] != 'P') break;
-      if (bitmapBuffer[i++] != '4') break;
-      if (bitmapBuffer[i++] != '\n') break;
-      //optional comment (until end of line (given by newline char))
-      if (bitmapBuffer[i] == '#')
-      {
-         do
-         {
-            if (i >= count)
-            {
-               goto _printBitmapException;
-            }
-         } while (bitmapBuffer[i++] != '\n'); //skip all chars until the end of the comment line was reached
-      }
-      //get image width
-      uint8_t digit;
-      while (1)
-      {
-         if (i >= count)
-         {
-            goto _printBitmapException;
-         }
-         digit = bitmapBuffer[i++];
-         if ((digit >= '0') && (digit <= '9')) //decimal number
-         {
-            width = 10 * width + (digit - '0');
-            continue;
-         }
-         break; //not a char
-      }
-      //width and height are separated by a space char
-      if (digit != ' ') break;
-      //get image height
-      while (1)
-      {
-         if (i >= count)
-         {
-            goto _printBitmapException;
-         }
-         digit = bitmapBuffer[i++];
-         if ((digit >= '0') && (digit <= '9')) //decimal number
-         {
-            height = 10 * height + (digit - '0');
-            continue;
-         }
-         break; //not a char
-      }
-
-      //the final expected char ia a newline
-      if (digit == '\n')
-      {
-         dataOffset = i; //image blob starts at this offset
-      }
-      break; //unconditional break, as this is not realy a while loop!
+      return -1; //input file invalid
    }
-
    //header parsed successfully
-   if ((dataOffset > 0) && (dataOffset < count))
+   const uint16_t length = (uint16_t)(2uL * height); //label length is based on 600 dots per inch (whereas width and height are 300dpi)
+   if (length == 0)
    {
-      error = -2; //preset error code to communication error
-      do
-      {
-         //send label information in header
-         uint8_t labelHeader[sizeof(_header)];
-         memcpy(labelHeader, _header, sizeof(_header)); //make a modifiable copy of the header
-         //set label length
-         uint32_t labelLength = 2uL * height; //label length is based on 600 dots per inch (whereas width and height are 300dpi)
-         labelHeader[11] = (uint8_t)labelLength;
-         labelHeader[12] = (uint8_t)(labelLength >> 8);
-         //set bitmap height
-         labelHeader[35] = (uint8_t)height;
-         labelHeader[36] = (uint8_t)(height >> 8);
-         labelHeader[37] = (uint8_t)(height >> 16);
-         labelHeader[38] = (uint8_t)(height >> 24);
-         //set bitmap width
-         labelHeader[39] = (uint8_t)width;
-         labelHeader[40] = (uint8_t)(width >> 8);
-         labelHeader[41] = (uint8_t)(width >> 16);
-         labelHeader[42] = (uint8_t)(width >> 24);
-         status = this->send(labelHeader, sizeof(labelHeader), true);
-         if (status <= 0) { goto _printBitmapException; }
-
-         //send bitmap data
-         do
-         {
-            status = this->send(&bitmapBuffer[dataOffset], (uint32_t)(count - dataOffset), true);
-            if (status <= 0) { goto _printBitmapException; }
-            //get next data blob from file
-            dataOffset = 0; //now data offset is 0!
-            count = fread(bitmapBuffer, sizeof(uint8_t), sizeof(bitmapBuffer), f);
-         } while (count > 0);
-
-         //send label footer + status request
-         status = this->send(_footer, sizeof(_footer));
-         if (status <= 0) { goto _printBitmapException; }
-         status = this->receive(receiveBuffer, sizeof(receiveBuffer));
-         if (status <= 0) { goto _printBitmapException; }
-      } while (false);
-      error = 0; //everything OK!
+      return -2;
    }
 
+   uint8_t buffer[1460]; //this it the (typical) maximal payload size of a tcp packet.
 
-_printBitmapException:
+   //for the first label (after call to start) we have to send the configuration (like the label length, print density, print quality, media type...)
+   //for all further labels we assume that these values doesn't change!!!
+   if (this->index == 0)
+   {
+      //send label configuration (includes the label length)
+      memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
+      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
+      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
+      status = this->send(buffer, sizeof(_configuration));
+      if (status <= 0) return -3;
+      this->index = 1;
+      sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+   }
+
+   //send label index
+   memcpy(buffer, _labelIndex, sizeof(_labelIndex)); //make a modifiable copy
+   buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
+   buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
+   status = this->send(buffer, sizeof(_labelIndex));
+   if (status <= 0) return -3;
+   this->index++; //preset for the next
+   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+
+   //the bitmap has to be sent as one blob with an header and an footer
+   //for a performant implementation, i am sending in chunks of 1460 bytes, which is exactly the max. payload size of a TCP package
+   //setup the header (contains bitmap height, width)
+   memcpy(buffer, _labelHeightWidth, sizeof(_labelHeightWidth));
+   //set bitmap height
+   buffer[LABEL_HEIGHT_OFFSET] = (uint8_t)height;
+   buffer[LABEL_HEIGHT_OFFSET + 1] = (uint8_t)(height >> 8);
+   buffer[LABEL_HEIGHT_OFFSET + 2] = (uint8_t)(height >> 16);
+   buffer[LABEL_HEIGHT_OFFSET + 3] = (uint8_t)(height >> 24);
+   //set bitmap width
+   buffer[LABEL_WIDTH_OFFSET] = (uint8_t)width;
+   buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(width >> 8);
+   buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(width >> 16);
+   buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(width >> 24);
+
+
+   //send the bitmap
+   //read first bunch of data into
+   FILE * f = fopen(file, "r"); //caller has already ensured, that the file exists!
+   fseek(f , dataOffset, SEEK_SET); //skip the bitmap header and move forward to the begin of the bitmap data
+   uint32_t offset = sizeof(_labelHeightWidth);
+   while (uint32_t count = fread(&buffer[offset], sizeof(uint8_t), sizeof(buffer) - offset, f)) //read data into buffer
+   {
+      offset += count;
+      if (offset >= sizeof(buffer)) //buffer full
+      {
+         //send chunk
+         status = this->send(buffer, sizeof(buffer));
+         if (status <= 0)
+         {
+            fclose(f);
+            return -3;
+         }
+         offset = 0;
+      }
+   }
    fclose(f);
-   return error;
+   //send the remaining data (+ footer)
+   buffer[offset++] = _labelFeed[0];
+   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
+   {
+      //send chunk
+      status = this->send(buffer, sizeof(buffer));
+      if (status <= 0) return -3;
+      offset = 0;
+   }
+   buffer[offset++] = _labelFeed[1];
+   status = this->send(buffer, offset);
+   if (status <= 0) return -3;
+   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+
+
+   //request LabelWriter status
+   status = this->send(_labelStatus, sizeof(_labelStatus));
+   if (status <= 0) return -3;
+   status = this->receive(buffer, sizeof(buffer));
+   if (status <= 0) return -4;
+
+   //success
+   return 0;
 }
 
 
@@ -291,3 +341,92 @@ static int getFileContent(const char * filename, uint8_t * buffer, size_t buffer
    //return number of bytes read from file
    return (int)count;
 }
+
+
+
+static uint32_t parsePortableBitmapP4(const char * file, uint32_t * h, uint32_t * w)
+{
+   uint8_t buffer[512]; //this should be enoug to read the first line in the bitmap file
+
+   //get (1st bunch of) bitmap from file
+   FILE * f = fopen(file, "r"); //caller has already ensured, that the file exists!
+   size_t count = fread(buffer, sizeof(uint8_t), sizeof(buffer), f);
+
+   //parse the data for the expected image format (based on the magic number) and the image width and height
+   uint32_t dataOffset = 0;
+   uint32_t width = 0;
+   uint32_t height = 0;
+   while (count > 7) //at least 7 bytes ("P4" + \n + width + space + height + \n)
+   {
+      uint32_t i = 0;
+      //magic number + newline. skip if the are not as expected!
+      if (buffer[i++] != 'P') break;
+      if (buffer[i++] != '4') break;
+      if (buffer[i++] != '\n') break;
+      //optional comment (until end of line (given by newline char))
+      while (buffer[i] == '#') //may be multiple lines
+      {
+         do
+         {
+            if (i >= count)
+            {
+               fclose(f);
+               return 0;
+            }
+         } while (buffer[i++] != '\n'); //skip all chars until the end of the comment line was reached
+      }
+      //get image width
+      uint8_t digit;
+      while (1)
+      {
+         if (i >= count)
+         {
+            fclose(f);
+            return 0;
+         }
+         digit = buffer[i++];
+         if ((digit >= '0') && (digit <= '9')) //decimal number
+         {
+            width = 10 * width + (digit - '0');
+            continue;
+         }
+         break; //not a char
+      }
+      //width and height are separated by a space char
+      if (digit != ' ') break;
+      //get image height
+      while (1)
+      {
+         if (i >= count)
+         {
+            fclose(f);
+            return 0;
+         }
+         digit = buffer[i++];
+         if ((digit >= '0') && (digit <= '9')) //decimal number
+         {
+            height = 10 * height + (digit - '0');
+            continue;
+         }
+         break; //not a char
+      }
+
+      //the final expected char is a newline
+      if (digit == '\n')
+      {
+         fclose(f);
+         if (i < count) //not at the end of the file?
+         {
+            *h = height;
+            *w = width;
+            return i; //image blob starts at this offset
+         }
+      }
+      break; //unconditional break, as this is not realy a while loop!
+   }
+
+   fclose(f);
+   return 0;
+}
+
+

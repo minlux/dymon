@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netdb.h>
@@ -9,8 +10,8 @@
 #include "dymon.h"
 
 
-#define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1MS   (3000)   //milli seconds send/receive timeout
+#define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
+#define _SEND_RECV_TIMEOUT_1MS   (10000)   //milli seconds send/receive timeout
 
 
 
@@ -30,7 +31,8 @@ bool DymonLinux::connect(const char * host, const uint16_t port)
 
    //start connecting to host
    struct sockaddr_in address;  /* the libc network address data structure */
-   address.sin_addr.s_addr = inet_addr(host); /* assign the address */
+   uint32_t addr = inet_addr(host); //convert string representation of IP address (decimals and dots) to binary
+   address.sin_addr.s_addr = addr; /* assign the address */
    address.sin_port = htons(port);            /* translate int2port num */
    address.sin_family = AF_INET;
    ::connect(sock, (struct sockaddr *)&address, sizeof(address));
@@ -54,7 +56,8 @@ bool DymonLinux::connect(const char * host, const uint16_t port)
    select(sock + 1, nullptr, &writeSet, nullptr, &connectTimeout);
    if (FD_ISSET(sock, &writeSet))
    {
-      sockfd = (int)sock;
+      this->sockfd = (int)sock;
+      this->ipv4 = addr;
       return true;
    }
 
@@ -94,4 +97,19 @@ void DymonLinux::close()
 {
    ::close(sockfd);
    sockfd = -1;
+   ipv4 = 0;
+}
+
+
+void DymonLinux::sleep1ms(uint32_t millis)
+{
+   usleep(1000uL * millis);
+}
+
+
+uint32_t DymonLinux::inetAddr(const char * host)
+{
+   uint32_t addr = inet_addr(host);
+   if (((int32_t)addr) == -1) addr = 0; //in case off error, set it to 0
+   return addr;
 }

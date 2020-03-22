@@ -41,8 +41,8 @@ static const LabelFormat_t m_LableFormat[NUM_LABEL_FORMATS] =
 {
    //Bitmap-                             Bitmap-       Label-  Barcode-  Title-            Body-
    //Orientation                         Width/Height  Length  Scale     Font              Font
-   { Bitmap::Orientation::Horizontally,  272,  252,    25.4,   1.0,      &FreeSans18pt7b,  &FreeSans15pt7b   }, //0: 25mm x 25mm Label
-   { Bitmap::Orientation::Vertically,    400,  960,    88.9,   0.9,      &FreeSans24pt7b,  &FreeSans18pt7b   }, //1: 36mm x 89mm Label
+   { Bitmap::Orientation::Horizontally,  272,  252,    25.4,   0.9,      &FreeSans18pt7b,  &FreeSans15pt7b   }, //0: 25mm x 25mm Label
+   { Bitmap::Orientation::Vertically,    400,  960,    88.9,   0.8,      &FreeSans24pt7b,  &FreeSans18pt7b   }, //1: 36mm x 89mm Label
 }; //Note: Width/Height are given as a pixels with 300dpi.
 
 
