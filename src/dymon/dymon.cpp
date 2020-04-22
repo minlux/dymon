@@ -107,7 +107,7 @@ int Dymon::start(const char * host, uint16_t port)
 //bitmap resolution is assumed to be 300dpi
 int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
 {
-   uint8_t buffer[1460]; //this it the (typical) maximal payload size of a tcp packet.
+   uint8_t buffer[14600]; //this it the (typical) maximal payload size of a tcp packet.
    int status;
 
 
@@ -196,6 +196,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
       status = this->send(buffer, sizeof(buffer));
       if (status <= 0) return -16;
       offset = 0;
+      sleep1ms(100); //sleep to prevent the os to concatenate the following data to this TCP package
    }
    buffer[offset++] = _labelFeed[1];
    status = this->send(buffer, offset);

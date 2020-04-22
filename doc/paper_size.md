@@ -3,7 +3,7 @@
 ## Paper Size Specification
 
 | Label | rcName | OptionId | Format | PageDimensions¹ | PrintableArea¹ | PrintableOrigin¹ | Cmd (ESC L) | Cmd-Arg (lable length²) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ----- | ------ | -------- | ------ | --------------- | -------------- | ---------------- | ----------- | ----------------------- |
 | Address30252 | 259 | 259 | 28mm x 89mm | 329x2100 | 299x1926 | 18x138 | 1B 4C 46 05 | 0x0546 = 1350 |
 | Address30320 | 260 | 260 | 28mm x 89mm | 329x2100 | 299x1926 | 18x138 | 1B 4C 46 05 | 0x0546 = 1350 |
 | HandingFileInsert30376 | 261 | 261 | 28mm x 51mm | 330x1200 | 282x976 | 36x188 | 1B 4C 84 03 | 0x0384 = 900 |
