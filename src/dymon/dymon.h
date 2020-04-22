@@ -35,10 +35,8 @@ private:
 private:
    static const uint8_t _status[];
    static const uint8_t _configuration[];
-   static const uint8_t _labelIndex[];
-   static const uint8_t _labelHeightWidth[];
-   static const uint8_t _labelFeed[];
-   static const uint8_t _labelStatus[];
+   static const uint8_t _labelIndexHeightWidth[];
+   static const uint8_t _labelFeedStatus[];
    static const uint8_t _final[];
    uint32_t session;
    uint16_t index;

@@ -5,15 +5,21 @@
 | CMD | HEX | Description |
 |---|---|---|
 | A | 1B 41 s0 | Request device status. s0=01: At begin of print job. s0=00: At end of print job. |
-| C | 1B 43 d0 | Set print density. d0=4B, d0=58, d0=64, d0=71. Default 64. |
+| C | 1B 43 d0 | Set print density. d0=4B (light), d0=58 (medium), d0=64 (normal), d0=71 (dark). Default 64 (normal). |
 | D | 1B 44 01 02 h0 h1 h2 h3 w0 w1 w2 w3 | Bitmap pixel dimensions. 32-bit width and height value in little endian format. |
 | E | 1B 45 | Form Feed. |
 | G | 1B 47 | Short Form Feed. |
 | L | 1B 4C l0 l1 | Label Length. 16-bit length value in little endian format. |
 | M | 1B 4D m0 00 00 00 00 00 00 00 | MediaType. m0=00 standard. m0=01 endurable. |
 | Q | 1B 51 | ??? comes at the end of a printing job |
+| c | 1B 63 | Print density light |
+| d | 1B 64 | Print density medium |
+| e | 1B 65 | Print density normal |
+| g | 1B 67 | Print density dark |
 | h | 1B 68 | Print in 300 x 300 dpi Text Quality mode. This is the default, high speed printing mode. |
 | i | 1B 69 | Print in 300 x 600 dpi Barcode and Graphics mode. This results in lower speed but greater positional and sizing accuracy of the print elements. |
+| n | 1B 6E i0 i1 | Label index. 16-bit upcounting index (relevant when printing multiple lables, starting with 1), in little endian format. |
+| s | 1B 73 s0 s1 s2 s3 | Session id. 32-bit session identifieer. ??? can be set to a random value -> 1. |
 
 
 ### E - Form Feed

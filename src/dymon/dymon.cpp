@@ -14,41 +14,33 @@ const uint8_t Dymon::_status[] = {
 };
 
 #define CONFIGURATION_OFFSET_SESSION         (2)
-#define CONFIGURATION_OFFSET_LABEL_LENGTH    (11) //label length must be patched int bytes [11,12]
+// #define CONFIGURATION_OFFSET_LABEL_LENGTH    (11) //label length must be patched int bytes [11,12]
 const uint8_t Dymon::_configuration[] = {
-   0x1B, 0x73, 1, 0, 0, 0, //counter (session)
+   0x1B, 0x73, 1, 0, 0, 0, //counter (session, preset = 1)
    0x1B, 0x43, 0x64,       //print density "normal"
-   0x1B, 0x4C,             //label length...
-   0, 0,                   //...given as multiple of 1/600 inch. (e.g. 600 ^= 600 * 1/600 inch = 1 inch) (16-bit little endian)
-   0x1B, 0x68,             //print quality, 300x300dpi
-   0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0, //media type, default
-   0x1B, 0x68
+   // 0x1B, 0x4C, 0, 0,       //label length given as multiple of 1/600 inch. (e.g. 600 ^= 600 * 1/600 inch = 1 inch) (16-bit little endian)
+   0x1B, 0x68,             //print quality, 300x300dpi (text mode)
+   0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0 //media type, standard
 };
 
-#define LABEL_INDEX_OFFSET    (2) //label index must be patched int bytes [2,3]
-const uint8_t Dymon::_labelIndex[] = {
-   0x1B, 0x6E, 1, 0,       //label index
-};
-
-#define LABEL_HEIGHT_OFFSET    (4) //label height must be patched int bytes [4..7]
-#define LABEL_WIDTH_OFFSET     (8) //label height must be patched int bytes [8..11]
-const uint8_t Dymon::_labelHeightWidth[] = { //must be prefixed to the labels bitmap blob
+#define LABEL_INDEX_OFFSET     (2) //label index must be patched int bytes [2,3]
+#define LABEL_HEIGHT_OFFSET    (8) //label height must be patched int bytes [8..11]
+#define LABEL_WIDTH_OFFSET     (12) //label height must be patched int bytes [12..15]
+const uint8_t Dymon::_labelIndexHeightWidth[] = {
+   0x1B, 0x6E, 1, 0,       //label index (preset = 1)
    0x1B, 0x44, 0x01, 0x02,
    0, 0, 0, 0,             //label height in pixel (32-bit little endian)
    0, 0, 0, 0              //label width in pixel (32-bit little endian). shall be a multiple of 8!
 };
 
-const uint8_t Dymon::_labelFeed[] = { //must be suffixed to the labels bitmap blob (because _labelHeightWidth+bitmap+_labelLineFeed must be sent in one unit)
-   0x1B, 0x47,             //short line feed
-};
-
-const uint8_t Dymon::_labelStatus[] = {
+const uint8_t Dymon::_labelFeedStatus [] = {
+   0x1B, 0x47,             //short form feed
    0x1B, 0x41, 0           //status request
 };
 
 const uint8_t Dymon::_final[] = {
-   0x1B, 0x45,             //line feed
-   0x1B, 0x51              //line tab
+   0x1B, 0x45,             //form feed
+   0x1B, 0x51              //???
 };
 
 
@@ -107,56 +99,30 @@ int Dymon::start(const char * host, uint16_t port)
 //bitmap resolution is assumed to be 300dpi
 int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
 {
-   uint8_t buffer[14600]; //this it the (typical) maximal payload size of a tcp packet.
+   uint8_t buffer[4096];
    int status;
-
 
    //parameter check
    if (bitmap == nullptr)
    {
       return -10;
    }
-   const uint16_t length = (uint16_t)(((600.0 * labelLength1mm) / 25.4) + 0.5); //calculate label length in 600dpi unit
-   if (length == 0)
-   {
-      return -11;
-   }
 
-
-   //for the first label (after call to start) we have to send the configuration (like the label length, print density, print quality, media type...)
+   //for the first label (after call to start) we have to send the configuration (like the label-length???, print-density, print-quality, media-type...)
    //for all further labels we assume that these values doesn't change!!!
    if (this->index == 0)
    {
-      //send label configuration (includes the label length)
-      memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
-      buffer[CONFIGURATION_OFFSET_SESSION] = (uint8_t)this->session;
-      buffer[CONFIGURATION_OFFSET_SESSION + 1] = (uint8_t)(this->session >> 8);
-      buffer[CONFIGURATION_OFFSET_SESSION + 2] = (uint8_t)(this->session >> 16);
-      buffer[CONFIGURATION_OFFSET_SESSION + 3] = (uint8_t)(this->session >> 24);
-      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
-      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
-      status = this->send(buffer, sizeof(_configuration));
+      status = this->send(_configuration, sizeof(_configuration), true);
       if (status <= 0) return -12;
       this->index = 1;
-      sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
    }
 
-
-   //send label index
-   memcpy(buffer, _labelIndex, sizeof(_labelIndex)); //make a modifiable copy
+   //send label index + geometry
+   memcpy(buffer, _labelIndexHeightWidth, sizeof(_labelIndexHeightWidth)); //make a modifiable copy
+   //index
    buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
    buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
-   status = this->send(buffer, sizeof(_labelIndex));
-   if (status <= 0) return -13;
-   this->index++; //preset for the next
-   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
-
-
-   //send the label bitmap
-   //the bitmap has to be sent as one blob with an header and an footer
-   //for a performant implementation, i am sending in chunks of 1460 bytes, which is exactly the max. payload size of a TCP package
-   //setup the header (contains bitmap height, width)
-   memcpy(buffer, _labelHeightWidth, sizeof(_labelHeightWidth));
+   this->index++;
    //set bitmap height
    buffer[LABEL_HEIGHT_OFFSET] = (uint8_t)bitmap->height;
    buffer[LABEL_HEIGHT_OFFSET + 1] = (uint8_t)(bitmap->height >> 8);
@@ -167,53 +133,24 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(bitmap->width >> 8);
    buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(bitmap->width >> 16);
    buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(bitmap->width >> 24);
-   //concat the bitmap data
-   uint32_t offset = sizeof(_labelHeightWidth);
-   for (uint32_t count = 0; count < bitmap->lengthByte; ++count)
-   {
-      if (offset >= sizeof(buffer)) //buffer full
-      {
-         //send chunk
-         status = this->send(buffer, sizeof(buffer));
-         if (status <= 0) return -14;
-         offset = 0;
-      }
-      //copy bitmap byte into buffer
-      buffer[offset++] = bitmap->data[count];
-   }
-   //send the remaining data (+ footer)
-   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
-   {
-      //send chunk
-      status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -15;
-      offset = 0;
-   }
-   buffer[offset++] = _labelFeed[0];
-   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
-   {
-      //send chunk
-      status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -16;
-      offset = 0;
-      sleep1ms(100); //sleep to prevent the os to concatenate the following data to this TCP package
-   }
-   buffer[offset++] = _labelFeed[1];
-   status = this->send(buffer, offset);
-   if (status <= 0) return -17;
-   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
+   status = this->send(buffer, sizeof(_labelIndexHeightWidth), true);
+   if (status <= 0) return -13;
 
+   //send the bitmap data
+   status = this->send(bitmap->data, bitmap->lengthByte, true);
+   if (status <= 0) return -14;
 
-   //request LabelWriter status
-   status = this->send(_labelStatus, sizeof(_labelStatus));
+   //send the form feed + status request
+   status = this->send(_labelFeedStatus, sizeof(_labelFeedStatus));
    if (status <= 0) return -18;
+
+   //wait for status response
    status = this->receive(buffer, sizeof(buffer));
    // if (buffer[15] == 1) -> papier ist alle!!! TODO
    if (status <= 0) return -19;
 #ifdef DYMON_DEBUG
    log_status(1, buffer, status);
 #endif
-
 
    //success
    return 0;
@@ -223,55 +160,41 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
 
 int Dymon::print_bitmap(const char * file)
 {
-   int status;
-   //parse the bitmap file
+   uint8_t buffer[4096];
    uint32_t height;
    uint32_t width;
-   uint32_t dataOffset = parsePortableBitmapP4(file, &height, &width);
+   uint32_t dataOffset;
+   uint32_t count;
+   int status;
+
+   //parameter check
+   if (file == nullptr)
+   {
+      return -20;
+   }
+
+   //parse the bitmap file
+   dataOffset = parsePortableBitmapP4(file, &height, &width);
    if (dataOffset == 0)
    {
-      return -20; //input file invalid
-   }
-   //header parsed successfully
-   const uint16_t length = (uint16_t)(2uL * height); //label length is based on 600 dots per inch (whereas width and height are 300dpi)
-   if (length == 0)
-   {
-      return -21;
+      return -21; //input file invalid
    }
 
-   uint8_t buffer[1460]; //this it the (typical) maximal payload size of a tcp packet.
-
-   //for the first label (after call to start) we have to send the configuration (like the label length, print density, print quality, media type...)
+   //for the first label (after call to start) we have to send the configuration (like the label-length???, print-density, print-quality, media-type...)
    //for all further labels we assume that these values doesn't change!!!
    if (this->index == 0)
    {
-      //send label configuration (includes the label length)
-      memcpy(buffer, _configuration, sizeof(_configuration)); //make a modifiable copy
-      buffer[CONFIGURATION_OFFSET_SESSION] = (uint8_t)this->session;
-      buffer[CONFIGURATION_OFFSET_SESSION + 1] = (uint8_t)(this->session >> 8);
-      buffer[CONFIGURATION_OFFSET_SESSION + 2] = (uint8_t)(this->session >> 16);
-      buffer[CONFIGURATION_OFFSET_SESSION + 3] = (uint8_t)(this->session >> 24);
-      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH] = (uint8_t)length;
-      buffer[CONFIGURATION_OFFSET_LABEL_LENGTH + 1] = (uint8_t)(length >> 8);
-      status = this->send(buffer, sizeof(_configuration));
+      status = this->send(_configuration, sizeof(_configuration), true);
       if (status <= 0) return -22;
       this->index = 1;
-      sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
    }
 
-   //send label index
-   memcpy(buffer, _labelIndex, sizeof(_labelIndex)); //make a modifiable copy
+   //send label index + geometry
+   memcpy(buffer, _labelIndexHeightWidth, sizeof(_labelIndexHeightWidth)); //make a modifiable copy
+   //index
    buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
    buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
-   status = this->send(buffer, sizeof(_labelIndex));
-   if (status <= 0) return -23;
-   this->index++; //preset for the next
-   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
-
-   //the bitmap has to be sent as one blob with an header and an footer
-   //for a performant implementation, i am sending in chunks of 1460 bytes, which is exactly the max. payload size of a TCP package
-   //setup the header (contains bitmap height, width)
-   memcpy(buffer, _labelHeightWidth, sizeof(_labelHeightWidth));
+   this->index++;
    //set bitmap height
    buffer[LABEL_HEIGHT_OFFSET] = (uint8_t)height;
    buffer[LABEL_HEIGHT_OFFSET + 1] = (uint8_t)(height >> 8);
@@ -282,50 +205,32 @@ int Dymon::print_bitmap(const char * file)
    buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(width >> 8);
    buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(width >> 16);
    buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(width >> 24);
-
+   status = this->send(buffer, sizeof(_labelIndexHeightWidth), true);
+   if (status <= 0) return -23;
 
    //send the bitmap
    //read first bunch of data into
    FILE * f = fopen(file, "r"); //caller has already ensured, that the file exists!
    fseek(f , dataOffset, SEEK_SET); //skip the bitmap header and move forward to the begin of the bitmap data
-   uint32_t offset = sizeof(_labelHeightWidth);
-   while (uint32_t count = fread(&buffer[offset], sizeof(uint8_t), sizeof(buffer) - offset, f)) //read data into buffer
+   while (count = fread(buffer, sizeof(uint8_t), sizeof(buffer), f)) //read data into buffer
    {
-      offset += count;
-      if (offset >= sizeof(buffer)) //buffer full
+      status = this->send(buffer, count, true);
+      if (status <= 0)
       {
-         //send chunk
-         status = this->send(buffer, sizeof(buffer));
-         if (status <= 0)
-         {
-            fclose(f);
-            return -24;
-         }
-         offset = 0;
+         fclose(f);
+         return -24;
       }
    }
    fclose(f);
-   //send the remaining data (+ footer)
-   buffer[offset++] = _labelFeed[0];
-   if (offset >= sizeof(buffer)) //if buffer is full, i have to send first
-   {
-      //send chunk
-      status = this->send(buffer, sizeof(buffer));
-      if (status <= 0) return -25;
-      offset = 0;
-   }
-   buffer[offset++] = _labelFeed[1];
-   status = this->send(buffer, offset);
-   if (status <= 0) return -26;
-   sleep1ms(10); //sleep to prevent the os to concatenate the following data to this TCP package
 
+   //send the form feed + status request
+   status = this->send(_labelFeedStatus, sizeof(_labelFeedStatus));
+   if (status <= 0) return -28;
 
-   //request LabelWriter status
-   status = this->send(_labelStatus, sizeof(_labelStatus));
-   if (status <= 0) return -27;
+   //wait for status response
    status = this->receive(buffer, sizeof(buffer));
    // if (buffer[15] == 1) -> papier ist alle!!! TODO
-   if (status <= 0) return -28;
+   if (status <= 0) return -29;
 
    //success
    return 0;

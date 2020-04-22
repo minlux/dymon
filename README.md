@@ -55,33 +55,33 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 1. Open TCP connection
 
 2. Get status of printer
-   1. `0x1B, 0x41, 1` : Send a TCP packet containing 3 bytes (2 byte command, 1 unknown byte)
+   1. `0x1B, 0x41, 1` : **A** Send a TCP packet containing 3 bytes (2 byte command, 1 unknown byte)
    2. Receive reply from printer (32 bytes, whose meaning is not known, yet!)
 
 3. Send label data as **ONE** blob
-   Either one big packet or multible packets with (all packets but the last) MSG_MORE flag set.
+   Either one big packet or multible packets with (all packets but the last) MSG_MORE flag set. ???
 
-   1. Set "header data" of label to be print (may be one packet with MSG_MORE)
-      1. `0x1B, 0x73, 1, 0, 0, 0` : Session-Counter, 2 byte command, 32-bit value (meaning of counter unknown)
-      2. `0x1B, 0x43, 0x64` : Print-Density, 2 byte command, 1 byte value (0x64 ^= normal)
-      3. `0x1B, 0x4C, 0x58, 0x02` Label-Length in 1/600 inch, 2 byte command, 16-bit value (e.g 1 inch ^= 600 ^= 0x258 ^= [0x58, 0x02])
-      4. `0x1B, 0x43` : Printer quality (300x300 dpi)
-      5. `0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0` : Media/Paper-Type, 2 byte command, 8 byte value (8x0 ^= normal)
-      6. `0x1B, 0x68` : Unknown 2 byte command
-      7. `0x1B, 0x6E, 1, 0` : Label index, 2 byte command, 16-bit value (meaning of index unknown)
-      8. `0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0` : Bitmap spec, 2 byte command, 2 unknown bytes, 32-bit bitmap height, 32-bit bitmap width (height 252px = 0xFC ^= [0xFC, 0, 0, 0]; width 272px = 0x110 ^= [0x10, 0x01, 0, 0])
+   1. Configure label settings (MSG_MORE = true)
+      1. `0x1B, 0x73, 1, 0, 0, 0` : **s** Session-Counter, 2 byte command, 32-bit value (meaning of counter unknown)
+      2. `0x1B, 0x43, 0x64` : **C** Print-Density, 2 byte command, 1 byte value (0x64 ^= normal)
+      3. `0x1B, 0x68` : **h** Printer in 300x300 dpi text mode
+      4. `0x1B, 0x4D, 0, 0, 0, 0, 0, 0, 0, 0` : **M** Media/Paper-Type, 2 byte command, 8 byte value (8x0 ^= normal)
 
-   2. Send bitmap "blob" (may be next packet with MSG_MORE)
+   2. Setup label (MSG_MORE = true)
+      1. `0x1B, 0x6E, 1, 0` : **n** Label index, 2 byte command, 16-bit value (meaning of index unknown)
+      2. `0x1B, 0x44, 0x01, 0x02, 0xFC, 0, 0, 0, 0x10, 0x01, 0, 0` : **D** Bitmap spec, 2 byte command, 2 unknown bytes, 32-bit bitmap height, 32-bit bitmap width (height 252px = 0xFC ^= [0xFC, 0, 0, 0]; width 272px = 0x110 ^= [0x10, 0x01, 0, 0])
 
-   3. Send "footer data" of label (last packet of blob - MSG_MORE clear!)
-      1. `0x1B, 0x47` : Short form feed, 2 byte command
-      2. `0x1B, 0x41, 0` : Get status, 2 byte command, 1 unknown byte
+   3. Send bitmap "blob" (MSG_MORE = true)
+
+   3. Send "footer data" of label (last packet of blob - MSG_MORE = false)
+      1. `0x1B, 0x47` : **G** Short form feed, 2 byte command
+      2. `0x1B, 0x41, 0` : **A** Get status, 2 byte command, 1 unknown byte
 
 4. Receive reply from printer (32 bytes, whose meaning is not known, yet!)
 
 5. Send a TCP packet containing following data to output label
-   1. `0x1B, 0x45` : Line feed, 2 byte command
-   2. `0x1B, 0x51` : Line tab, 2 byte command
+   1. `0x1B, 0x45` : **E** Line feed, 2 byte command
+   2. `0x1B, 0x51` : **Q** Line tab, 2 byte command
 
 6. Close TCP connection
 
@@ -162,11 +162,15 @@ You can also use *Imagemagick* to convert a file into pmb. For example:
 convert your_pic.jpg your_pic.pbm
 ```
 
-You can also do more advanced conversion at once using *Imagemagick's convert*. The following command resizes an image but keeps the aspect ration. It will be resized so that the width is maximal 960 pixel, the height is maximal 400 pixel. It depends on the geometry of the input image which rule applies. Then it extends the canvas to 960x400 and aligns the image centered in the canvas. Then the image is rotated by 90 degrees (counter clockwise). Finally it is converted to pbm p4. The resulting image would fit to a 36mm x 89mm label.
+You can also do more advanced conversion at once using *Imagemagick's convert*. The following command resizes an image but keeps the aspect ration. It will be resized so that the width is maximal 960 pixel, the height is maximal 392 pixel. It depends on the geometry of the input image which rule applies. Then it extends the canvas to 960x392 and aligns the image centered in the canvas. Then the image is rotated by 90 degrees (counter clockwise). Finally it is converted to pbm p4. The resulting image would fit to a 36mm x 89mm label.
 ```
-convert -resize 960x400 -extent 960x400 -gravity center -rotate 90 eagle.jpg eagle_36x89.pbm
+convert -resize 960x392 -extent 960x392 -gravity center -rotate 90 eagle.jpg eagle_36x89.pbm
 ```
 
+Same for a 25mm x 25mm label:
+```
+convert -resize 272x252 -extent 272x252 -gravity center logo.svg logo.pbm
+```
 
 
 ### dymon_srv
@@ -180,3 +184,8 @@ Example:
 
 ![dymon_srv](doc/webif.png)
 
+
+
+## See also
+[Commands and Status](doc/cmd_status.md)
+[Labels](doc/paper_size.md)
