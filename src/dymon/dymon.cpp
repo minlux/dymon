@@ -9,9 +9,6 @@ static int getFileContent(const char * filename, uint8_t * buffer, size_t buffer
 static uint32_t parsePortableBitmapP4(const char * file, uint32_t * h, uint32_t * w);
 
 
-const uint8_t Dymon::_status[] = {
-   0x1B, 0x41, 1           //status request
-};
 
 #define CONFIGURATION_OFFSET_SESSION         (2)
 // #define CONFIGURATION_OFFSET_LABEL_LENGTH    (11) //label length must be patched int bytes [11,12]
@@ -60,8 +57,9 @@ static void log_status(int i, const uint8_t * status, uint32_t count)
 
 int Dymon::start(const char * host, uint16_t port)
 {
-   uint8_t receiveBuffer[128];
-   int status;
+   static const uint8_t _statusRequest[] = {
+      0x1B, 0x41, 1           //status request
+   };
 
    //check host address
    if (host == nullptr)
@@ -69,28 +67,51 @@ int Dymon::start(const char * host, uint16_t port)
       return -1;
    }
    //create TCP socket and connect to LabelWriter
-   status = this->connect(host, port);
+   int status = this->connect(host, port);
    if (status == 0)
    {
       return -2;
    }
    //request LabelWriter status
-   status = this->send(_status, sizeof(_status));
+   status = this->send(_statusRequest, sizeof(_statusRequest));
    if (status <= 0)
    {
       return -3;
    }
-   status = this->receive(receiveBuffer, sizeof(receiveBuffer));
-   // if (receiveBuffer[15] == 1) -> papier ist alle!!! TODO
+   status = this->receive(this->status, sizeof(this->status));
    if (status <= 0)
    {
       return -4;
    }
 #ifdef DYMON_DEBUG
-   log_status(0, receiveBuffer, status);
+   log_status(0, this->status, status);
 #endif
    //success
    index = 0;
+   return 0;
+}
+
+
+int Dymon::read_status() //request a status update
+{
+   static const uint8_t _statusRequest[] = {
+      0x1B, 0x41, 0           //status request
+   };
+
+   int status = this->send(_statusRequest, sizeof(_statusRequest));
+   if (status <= 0)
+   {
+      return -3;
+   }
+   status = this->receive(this->status, sizeof(this->status));
+   if (status <= 0)
+   {
+      return -4;
+   }
+#ifdef DYMON_DEBUG
+   log_status(0, this->status, status);
+#endif
+   //success
    return 0;
 }
 
@@ -145,11 +166,10 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    if (status <= 0) return -18;
 
    //wait for status response
-   status = this->receive(buffer, sizeof(buffer));
-   // if (buffer[15] == 1) -> papier ist alle!!! TODO
+   status = this->receive(this->status, sizeof(this->status));
    if (status <= 0) return -19;
 #ifdef DYMON_DEBUG
-   log_status(1, buffer, status);
+   log_status(0, this->status, status);
 #endif
 
    //success
@@ -228,9 +248,11 @@ int Dymon::print_bitmap(const char * file)
    if (status <= 0) return -28;
 
    //wait for status response
-   status = this->receive(buffer, sizeof(buffer));
-   // if (buffer[15] == 1) -> papier ist alle!!! TODO
+   status = this->receive(this->status, sizeof(this->status));
    if (status <= 0) return -29;
+#ifdef DYMON_DEBUG
+   log_status(0, this->status, status);
+#endif
 
    //success
    return 0;

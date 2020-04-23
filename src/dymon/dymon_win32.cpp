@@ -72,7 +72,6 @@ bool DymonWin32::connect(const char * host, const uint16_t port)
    if (FD_ISSET(sock, &writeSet))
    {
       this->sockfd = (int)sock;
-      this->ipv4 = addr;
       return true;
    }
 
@@ -110,19 +109,4 @@ void DymonWin32::close()
 {
    closesocket(sockfd);
    sockfd = -1;
-   ipv4 = 0;
-}
-
-
-void DymonWin32::sleep1ms(uint32_t millis)
-{
-   Sleep(millis);
-}
-
-
-uint32_t DymonWin32::inetAddr(const char * host)
-{
-   uint32_t addr = inet_addr(host);
-   if (((int32_t)addr) == -1) addr = 0; //in case off error, set it to 0
-   return addr;
 }

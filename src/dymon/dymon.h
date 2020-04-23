@@ -14,15 +14,18 @@
 class Dymon
 {
 public:
-   Dymon(uint32_t session) { this->session = session, index = 0; ipv4 = 0; }
+   Dymon(uint32_t session) { this->session = session, index = 0; }
    int start(const char * host, uint16_t port = 9100); //create TCP socket and connect to LabelWriter
+   int read_status(); //request a status update
    int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
-   inline bool isConnectedTo(const char * host) { (inetAddr(host) == ipv4); }; //checks if this Dymo-object is connected to a specific host
 
-   //helper function!!!
-   virtual uint32_t inetAddr(const char * host) = 0; //returns the ipV4 address of the given host (0 in case of error)
+   //status information (are read/updated in 'start', 'read_status' and at the end of 'print/print_bitmap')
+   inline bool paperOut() { return (status[15] != 0); } //no label in printer
+   //??? inline bool topOfForm() { return (status[7] != 0); } //the hole in the label is at the top, so that the label could be precisly teared down
+   //??? inline bool printerBusy() { return (status[0] != 0); } //printer is busy - may be allocated by me or by someone other
+
 
 private:
    //TCP access functions. Must be implemented in derived class!
@@ -30,18 +33,15 @@ private:
    virtual int send(const uint8_t * data, const size_t dataLen, bool more = false) = 0;
    virtual int receive(uint8_t * buffer, const size_t bufferLen) = 0;
    virtual void close() = 0;
-   virtual void sleep1ms(uint32_t millis) = 0;
 
 private:
-   static const uint8_t _status[];
    static const uint8_t _configuration[];
    static const uint8_t _labelIndexHeightWidth[];
    static const uint8_t _labelFeedStatus[];
    static const uint8_t _final[];
    uint32_t session;
    uint16_t index;
-protected:
-   uint32_t ipv4; //ipV4 internet address we are connected to (0 if not connected!)
+   uint8_t status[32];
 };
 
 
@@ -58,8 +58,6 @@ private:
    int send(const uint8_t * data, const size_t dataLen, bool more = false);
    int receive(uint8_t * buffer, const size_t bufferLen);
    void close();
-   void sleep1ms(uint32_t millis);
-   uint32_t inetAddr(const char * host); //returns the ipV4 address of the given host (0 in case of error)
 
 
 private:
