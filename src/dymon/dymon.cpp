@@ -84,7 +84,7 @@ int Dymon::start(const char * host, uint16_t port)
       return -4;
    }
 #ifdef DYMON_DEBUG
-   log_status(0, this->status, status);
+   log_status(1, this->status, status);
 #endif
    //success
    index = 0;
@@ -92,11 +92,12 @@ int Dymon::start(const char * host, uint16_t port)
 }
 
 
-int Dymon::read_status() //request a status update
+int Dymon::read_status(uint8_t mode) //request a status update
 {
-   static const uint8_t _statusRequest[] = {
+   uint8_t _statusRequest[] = {
       0x1B, 0x41, 0           //status request
    };
+   _statusRequest[2] = mode;
 
    int status = this->send(_statusRequest, sizeof(_statusRequest));
    if (status <= 0)
@@ -109,7 +110,7 @@ int Dymon::read_status() //request a status update
       return -4;
    }
 #ifdef DYMON_DEBUG
-   log_status(0, this->status, status);
+   log_status(mode, this->status, status);
 #endif
    //success
    return 0;
@@ -263,6 +264,15 @@ void Dymon::end()
 {
    //send final form-feed command data
    this->send(_final, sizeof(_final));
+   //close socket
+   this->close();
+}
+
+
+void Dymon::_debugEnd()
+{
+   //send final form-feed command data
+   this->send(&_final[2], sizeof(_final) - 2);
    //close socket
    this->close();
 }

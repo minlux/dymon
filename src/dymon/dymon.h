@@ -16,10 +16,11 @@ class Dymon
 public:
    Dymon(uint32_t session) { this->session = session, index = 0; }
    int start(const char * host, uint16_t port = 9100); //create TCP socket and connect to LabelWriter
-   int read_status(); //request a status update
+   int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
+   void _debugEnd(); //close without form feed
 
    //status information (are read/updated in 'start', 'read_status' and at the end of 'print/print_bitmap')
    inline bool paperOut() { return (status[15] != 0); } //no label in printer

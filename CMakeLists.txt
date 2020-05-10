@@ -49,3 +49,14 @@ add_executable(dymon_srv
 )
 target_link_libraries(dymon_srv pthread)
 
+
+
+#debugging and development
+add_executable(dev
+   src/dymon/dymon.cpp
+   src/dymon/dymon_linux.cpp
+   src/main_dev.cpp
+)
+target_compile_definitions(dev PUBLIC
+   DYMON_DEBUG
+)
