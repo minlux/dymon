@@ -32,7 +32,7 @@ const uint8_t Dymon::_labelIndexHeightWidth[] = {
 
 const uint8_t Dymon::_labelFeedStatus [] = {
    0x1B, 0x47,             //short form feed
-   0x1B, 0x41, 0           //status request
+   0x1B, 0x41, 0           //status request (passive)
 };
 
 const uint8_t Dymon::_final[] = {
@@ -72,7 +72,7 @@ int Dymon::start(const char * host, uint16_t port)
    {
       return -2;
    }
-   //request LabelWriter status
+   //request LabelWriter status (active)
    status = this->send(_statusRequest, sizeof(_statusRequest));
    if (status <= 0)
    {
@@ -84,7 +84,7 @@ int Dymon::start(const char * host, uint16_t port)
       return -4;
    }
 #ifdef DYMON_DEBUG
-   log_status(1, this->status, status);
+   log_status(1, this->status, status); //active status
 #endif
    //success
    index = 0;
@@ -92,6 +92,7 @@ int Dymon::start(const char * host, uint16_t port)
 }
 
 
+//mode: 0 ^= passive, 1 ^= active
 int Dymon::read_status(uint8_t mode) //request a status update
 {
    uint8_t _statusRequest[] = {
@@ -162,7 +163,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    status = this->send(bitmap->data, bitmap->lengthByte, true);
    if (status <= 0) return -14;
 
-   //send the form feed + status request
+   //send the form feed + (passive) status request
    status = this->send(_labelFeedStatus, sizeof(_labelFeedStatus));
    if (status <= 0) return -18;
 

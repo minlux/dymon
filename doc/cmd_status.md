@@ -50,11 +50,40 @@ In continuous feed mode the printer will respond to Form Feed (E) and Short Form
 
 
 ## Printer Status
-32-Byte Printer Status
+The meaning of the 32 status bytes read back from the printer are not realy decoded yet. However there are some findings:
 
-| Byte | Description |
-|---|---|
-| 0 | todo |
-| .. | todo |
-| 31 | todo |
+First, there seems to be two modes how the get the printer status. I call this *active* and *passive* mode. I think this is also someting like a semaphore acquisition.
+- A active status request looks like that: `0x1B, 0x41, 1`. May be something like "aquire_semaphore_and_return_status()"
+- A passive status request looks like that: `0x1B, 0x41, 0`. May be something like "just_get_status()"
+
+| Byte | Meaning |Description |
+|---|---|---|
+| 0 | BUSY | Indicates if the printer is free (BUSY==0) or aquired by someone else (BUSY!=0) |
+| 7 | Top Of Form (TOF) | The hole in the label is at the top, so that the label could be precisly teared down (TOF!=0) |
+| 15 | Paper Out | There is no more label in the printer (PaperOut!=0) |
+| others | todo |
+
+
+
+
+### TODO
+
+In the bytes[1..4] there seems to be the session-counter from the request (cf 3.1.1). Kommt aber nur zum "Vorschein" wenn man mehrere Labels druckt. Und zwar erst ab dem 2ten Status Request mit `0x1B, 0x41, 0` (also nach dem Drucken des 2ten Label). Anfangs kommt immer 4x 0. Nach dem Ende des Druckens kommt auch wieder 4x 0, wenn man z.B. noch ein paar  `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request hinterher schickt.
+
+In the bytes[5..6] there seems to be the label-index-counter from the request (cf. 3.1.7). Hier ist es ählich wie beim Session-Counter. Hier kommt der Wert zurück, den man im Vorherigen Request gesetzt hat. Das gilt aber nicht, für das erste `0x1B, 0x41, 1` und das erst `0x1B, 0x41, 0`. Da kommt dann noch der Wert den man Vorletzen Request gemacht hat. Nach dem Ende des Drucks kann man zuletzt gesetzen Counter Wert auch beliebig oft abrufen (indem man `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request schickt).
+
+Dieses "komische" Verhalten, hat bestimmt mit Byte[7] zu tun. Dieses Byte ist beim ersten `0x1B, 0x41, 1` und beim ersten `0x1B, 0x41, 0` immer 0. Wenn man mehrere Labels druckt, ist dieses Byte ab den 2ten `0x1B, 0x41, 0` dann 1. Schickt man nach dem Ende `0x1B, 0x41, 1` oder `0x1B, 0x41, 0` Request, bleibe dies Byte auf 1. Das könnte also so eine Art "letzter Job completed" flag sein. Oder (und das erscheint mir jetzt, während ich drüber nachdenkte fast plausibler) ist es ein Idle-Flag das anzeigt ob der Drucker druckt oder nicht. Beim ersten `0x1B, 0x41, 1` ist der Drucker ja noch *Idle*. Nach dem senden des ersten Labels und dem anschließenden `0x1B, 0x41, 0` ist der Drucker auch noch Idle, weil das ganze "sooooo schnell" ging und der Drucker noch garnicht angefangen hat...
+Die anderen Status Bytes:
+- Byte[10]: Normal 0x08, wenn kein Papier drin ist und mehrere Label gedruckt werden kommt hier ab dem 2ten `0x1B, 0x41, 0` Request eine 2.
+- Byte[20]: Immer 0x01
+- Byte[21]: Immer 0x01
+- Byte[27]: Immer 0x02
+- Byte[28]: Immer 0x02
+- alle nicht genannten: Immer 0x00
+
+
+In byte[15] there seems to be the "paper out" information. If paper is present, this byte is 0. If paper is out, this byte is 1.
+
+When requesting the active) status with `0x1B, 0x41, 1` then in byte[0] stands a 0. When requesting the status with `0x1B, 0x41, 0` then in byte[0] stands a 1.
+Wenn man z.B. 3 Label druckt aber kein Papier drin ist, dann geht steht hier ab dem 2ten `0x1B, 0x41, 0` request eine 2. Das ist wahrscheinlich ein Fehlerflag
 
