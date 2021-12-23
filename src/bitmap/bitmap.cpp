@@ -4,9 +4,32 @@
 
 
 
+Bitmap::Bitmap()
+{
+   glyphIterator = nullptr;
+   data = nullptr;
+   // memset(this, 0, sizeof(Bitmap));
+}
+
+
+
 Bitmap::Bitmap(const uint32_t width, const uint32_t height, enum Orientation orientation,
                const GFXfont * const font)
 {
+   glyphIterator = nullptr;
+   data = nullptr;
+   init(width, height, orientation, font);
+}
+
+
+void Bitmap::init(const uint32_t width, const uint32_t height, enum Orientation orientation,
+               const GFXfont * const font)
+{
+   //cleanup old instance
+   if (glyphIterator) delete glyphIterator;
+   if (data) delete[] data;
+   utf8.reset();
+
    //assert((width % 8) == 0); //width shall be a multiple of 8
    //set bitmap properties
    this->width = width;
@@ -31,8 +54,8 @@ Bitmap::Bitmap(const uint32_t width, const uint32_t height, enum Orientation ori
 
 Bitmap::~Bitmap()
 {
-   delete glyphIterator;
-   delete[] data;
+   if (glyphIterator) delete glyphIterator;
+   if (data) delete[] data;
 }
 
 

@@ -7,7 +7,9 @@
 
 /* -- Includes ------------------------------------------------------------ */
 #include <stdint.h>
+#include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include "gfxfont.h"
 #include "FreeSans15pt7b.h"
 #include "FreeSans18pt7b.h"
@@ -47,6 +49,7 @@ static const LabelFormat_t m_LableFormat[NUM_LABEL_FORMATS] =
 
 
 /* -- Module Global Function Prototypes ----------------------------------- */
+static int _getBitmap(cJSON * json, Bitmap& bitmap);
 
 
 /* -- Implementation ------------------------------------------------------ */
@@ -108,21 +111,96 @@ void * print_json_start(cJSON * json, uint32_t session)
 */
 int print_json_do(cJSON * json, void * prt)
 {
-   int error = 1;
+   Bitmap bitmap;
+   int status = _getBitmap(json, bitmap);
+   if (status == 0)
+   {
+      //print label
+      const LabelFormat_t * lf = &m_LableFormat[status];
+      int error = ((Dymon *)prt)->print(&bitmap, lf->labelLength);
+   #ifdef DYMON_DEBUG
+      if (error < 0) std::cout << "Dymon::print() error " << error << std::endl;
+   #endif
+      return error;
+   }
+   return -status;
+}
+
+
+//finalize printing
+void print_json_end(void * prt)
+{
+   Dymon * dymon = (Dymon *)prt;
+   dymon->end(); //this executes the final form feed
+#ifdef _WIN32
+   delete (DymonWin32 *)prt;
+#else //Linux assumed
+   delete (DymonLinux *)prt;
+#endif
+}
+
+
+
+
+/*
+   Print a label into a PMB file (P4 formate).
+   JSON object data like this expexted:
+   {
+      "format":2,
+      "title":"todo",
+      "body":[
+         "first line text",
+         "second line",
+         "3rd",
+         "4th line of text"
+      ],
+      "barcode":1234567
+   }
+*/
+int print_json_p4(cJSON * json, const char * filename)
+{
+   Bitmap bitmap;
+   int error = _getBitmap(json, bitmap);
+   if (error >= 0)
+   {
+      error = -1; //preset
+      FILE * f = fopen(filename, "w");
+      if (f != nullptr)
+      {
+         char header[32];
+         int len = sprintf(header, "P4\n%u %u\n", bitmap.width, bitmap.height); //generate header
+         fwrite(header, 1, len, f); //write header
+         fwrite(bitmap.data, 1, bitmap.lengthByte, f); //write payload
+         fclose(f); //we are done
+         error = 0;
+      }
+   }
+   return error;
+}
+
+
+
+//return
+//On success, it returns the (positive) format number of the label (index into m_LableFormat array)
+//-1 on error, if no valid JSON object
+//-3 on error, if there is no format specified
+//-4 on error, if the given format is undefined
+static int _getBitmap(cJSON * json, Bitmap& bitmap)
+{
+   int error = -1;
    if (cJSON_IsObject(json))
    {
-      error = 3;
+      error = -3;
       cJSON * format = cJSON_GetObjectItemCaseSensitive(json, "format");
       if (cJSON_IsNumber(format))
       {
-         error = 4;
+         error = -4;
          //Lable-Format
          const int labelFormat = format->valueint; //currently not supported
          if ((uint32_t)labelFormat < NUM_LABEL_FORMATS)
          {
             const LabelFormat_t * lf = &m_LableFormat[labelFormat];
-            Bitmap bitmap((uint32_t)lf->bitmapWidth, (uint32_t)lf->bitmapHeight,
-                           (enum Bitmap::Orientation)lf->bitmapOrientation);
+            bitmap.init((uint32_t)lf->bitmapWidth, (uint32_t)lf->bitmapHeight, (enum Bitmap::Orientation)lf->bitmapOrientation);
             const GFXfont * font;
             uint32_t y = 0; //Y-coordinate of the bitmap
 
@@ -168,27 +246,10 @@ int print_json_do(cJSON * json, void * prt)
                   //y += 2 * font->yAdvance; //add height of barcode to y-coordinate
                }
             }
-
-            //print label
-            error = ((Dymon *)prt)->print(&bitmap, lf->labelLength);
-#ifdef DYMON_DEBUG
-            if (error < 0) std::cout << "Dymon::print() error " << error << std::endl;
-#endif
+            //bitmap successfully printed
+            return labelFormat;
          }
       }
    }
    return error;
-}
-
-
-//finalize printing
-void print_json_end(void * prt)
-{
-   Dymon * dymon = (Dymon *)prt;
-   dymon->end(); //this executes the final form feed
-#ifdef _WIN32
-   delete (DymonWin32 *)prt;
-#else //Linux assumed
-   delete (DymonLinux *)prt;
-#endif
 }
