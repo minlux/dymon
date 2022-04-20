@@ -113,7 +113,7 @@ int print_json_do(cJSON * json, void * prt)
 {
    Bitmap bitmap;
    int status = _getBitmap(json, bitmap);
-   if (status == 0)
+   if (status >= 0)
    {
       //print label
       const LabelFormat_t * lf = &m_LableFormat[status];
