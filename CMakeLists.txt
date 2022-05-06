@@ -17,6 +17,7 @@ if(WIN32)
   set(dymon_x dymon_win32.cpp)
 else()
   set(dymon_x dymon_linux.cpp)
+#  set(dymon_x dymon_linux_device.cpp)
 endif()
 
 

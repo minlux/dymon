@@ -55,38 +55,32 @@ static int _getBitmap(cJSON * json, Bitmap& bitmap);
 /* -- Implementation ------------------------------------------------------ */
 
 
-/*
-   Open up a connection to the DYMO given by the IP.
 
-   JSON object data like this expexted:
-   {
-      "ip":"127.0.0.1"
-   }
+/*
+   Open up a connection to a DYMO. The given argument depends on the specific Dymon instance.
+   It can be an JSON with an IP address (like { "ip":"127.0.0.1" })
+   or path to a device name (like /dev/usb/lp0).
 */
-void * print_json_start(cJSON * json, uint32_t session)
+void * print_json_start(void * arg, uint32_t session)
 {
-   if (cJSON_IsObject(json))
-   {
-      cJSON * ip = cJSON_GetObjectItemCaseSensitive(json, "ip"); //get IP
-      if (cJSON_IsString(ip))
-      {
-      #ifdef _WIN32
-         DymonWin32 * dymon = new DymonWin32(session);
-      #else //Linux assumed
-         DymonLinux * dymon = new DymonLinux(session);
-      #endif
-         const char * printerIp = ip->valuestring;
-         int status = dymon->start(printerIp); //connect to a DYMO at the given IP
-         if (status == 0)
-         {
-            return dymon;
-         }
-#ifdef DYMON_DEBUG
-         std::cout << "Dymon::start() error " << status << std::endl;
+#ifdef _WIN32
+   DymonWin32 * dymon = new DymonWin32(session);
+#else //Linux assumed
+   DymonLinux * dymon = new DymonLinux(session);
 #endif
-         delete dymon;
-      }
+   int status = dymon->start(arg); //connect to a DYMO at the given IP
+   if (status == 0)
+   {
+      return dymon;
    }
+   //otherwise
+#if 1
+   if (dymonDebug)
+   {
+      std::cout << "Dymon::start() error " << status << std::endl;
+   }
+#endif
+   delete dymon;
    return nullptr;
 }
 
@@ -118,8 +112,11 @@ int print_json_do(cJSON * json, void * prt)
       //print label
       const LabelFormat_t * lf = &m_LableFormat[status];
       int error = ((Dymon *)prt)->print(&bitmap, lf->labelLength);
-   #ifdef DYMON_DEBUG
-      if (error < 0) std::cout << "Dymon::print() error " << error << std::endl;
+   #if 1
+      if (dymonDebug)
+      {
+         if (error < 0) std::cout << "Dymon::print() error " << error << std::endl;
+      }
    #endif
       return error;
    }

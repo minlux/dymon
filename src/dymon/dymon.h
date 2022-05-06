@@ -11,11 +11,17 @@
 #include <stdint.h>
 #include "bitmap.h"
 
+
+extern "C" {
+   extern unsigned int dymonDebug;
+}
+
+
 class Dymon
 {
 public:
    Dymon(uint32_t session) { this->session = session, index = 0; }
-   int start(const char * host, uint16_t port = 9100); //create TCP socket and connect to LabelWriter
+   int start(void * arg); //create connection to LabelWriter
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
@@ -30,7 +36,7 @@ public:
 
 private:
    //TCP access functions. Must be implemented in derived class!
-   virtual bool connect(const char * host, const uint16_t port) = 0;
+   virtual bool connect(void * arg) = 0;
    virtual int send(const uint8_t * data, const size_t dataLen, bool more = false) = 0;
    virtual int receive(uint8_t * buffer, const size_t bufferLen) = 0;
    virtual void close() = 0;
@@ -55,7 +61,7 @@ public:
 
 private:
    //TCP access functions. Must be implemented in derived class!
-   bool connect(const char * host, const uint16_t port);
+   bool connect(void * arg);
    int send(const uint8_t * data, const size_t dataLen, bool more = false);
    int receive(uint8_t * buffer, const size_t bufferLen);
    void close();
@@ -75,7 +81,7 @@ public:
 
 private:
    //TCP access functions. Must be implemented in derived class!
-   bool connect(const char * host, const uint16_t port);
+   bool connect(void * arg);
    int send(const uint8_t * data, const size_t dataLen, bool more = false);
    int receive(uint8_t * buffer, const size_t bufferLen);
    void close();

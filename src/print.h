@@ -31,7 +31,7 @@
 #include "cJSON.h"
 
 
-void * print_json_start(cJSON * json, uint32_t session = 1); //open connection to labelprinter
+void * print_json_start(void * arg, uint32_t session = 1); //open connection to labelprinter
 int print_json_do(cJSON * json, void * prt); //send label to labelprinter
 void print_json_end(void * prt); //close connection to labelprinter
 

@@ -1,5 +1,6 @@
 #include <io.h>
 #include <winsock2.h>
+#include "cJSON.h"
 #include "dymon.h"
 
 #define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
@@ -29,8 +30,21 @@ static WsaHelper _wasHelper;
 
 
 
-bool DymonWin32::connect(const char * host, const uint16_t port)
+bool DymonWin32::connect(void * arg)
 {
+   if (arg == nullptr)
+   {
+      return false;
+   }
+   cJSON * ip = cJSON_GetObjectItemCaseSensitive((cJSON *)arg, "ip"); //get IP
+   if (!cJSON_IsString(ip))
+   {
+      return false;
+   }
+   const char * printerIp = ip->valuestring;
+   constexpr uint16_t port = 9100;
+
+
    //try to create socket
    SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
    if (sock == INVALID_SOCKET) //INVALID_SOCKET == ~0 ^= -1
@@ -45,7 +59,7 @@ bool DymonWin32::connect(const char * host, const uint16_t port)
 
    //start connecting to host
    struct sockaddr_in address;  /* the libc network address data structure */
-   uint32_t addr = inet_addr(host); //convert string representation of IP address (decimals and dots) to binary;
+   uint32_t addr = inet_addr(printerIp); //convert string representation of IP address (decimals and dots) to binary;
    address.sin_addr.s_addr = addr; /* assign the address */
    address.sin_port = htons(port);            /* translate int2port num */
    address.sin_family = AF_INET;

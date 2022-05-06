@@ -4,6 +4,12 @@
 #include "dymon.h"
 
 
+extern "C" {
+   unsigned int dymonDebug;
+}
+
+
+
 //helper functions
 static int getFileContent(const char * filename, uint8_t * buffer, size_t bufferSize); //read file
 static uint32_t parsePortableBitmapP4(const char * file, uint32_t * h, uint32_t * w);
@@ -55,19 +61,14 @@ static void log_status(int i, const uint8_t * status, uint32_t count)
 
 
 
-int Dymon::start(const char * host, uint16_t port)
+int Dymon::start(void * arg)
 {
    static const uint8_t _statusRequest[] = {
       0x1B, 0x41, 1           //status request
    };
 
-   //check host address
-   if (host == nullptr)
-   {
-      return -1;
-   }
    //create TCP socket and connect to LabelWriter
-   int status = this->connect(host, port);
+   int status = this->connect(arg);
    if (status == 0)
    {
       return -2;
@@ -83,8 +84,11 @@ int Dymon::start(const char * host, uint16_t port)
    {
       return -4;
    }
-#ifdef DYMON_DEBUG
-   log_status(1, this->status, status); //active status
+#if 1
+   if (dymonDebug)
+   {
+      log_status(1, this->status, status); //active status
+   }
 #endif
    //success
    index = 0;
@@ -110,8 +114,11 @@ int Dymon::read_status(uint8_t mode) //request a status update
    {
       return -4;
    }
-#ifdef DYMON_DEBUG
-   log_status(mode, this->status, status);
+#if 1
+   if (dymonDebug)
+   {
+      log_status(mode, this->status, status);
+   }
 #endif
    //success
    return 0;
@@ -170,8 +177,11 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm)
    //wait for status response
    status = this->receive(this->status, sizeof(this->status));
    if (status <= 0) return -19;
-#ifdef DYMON_DEBUG
-   log_status(0, this->status, status);
+#if 1
+   if (dymonDebug)
+   {
+      log_status(0, this->status, status);
+   }
 #endif
 
    //success
@@ -252,8 +262,11 @@ int Dymon::print_bitmap(const char * file)
    //wait for status response
    status = this->receive(this->status, sizeof(this->status));
    if (status <= 0) return -29;
-#ifdef DYMON_DEBUG
-   log_status(0, this->status, status);
+#if 1
+   if (dymonDebug)
+   {
+      log_status(0, this->status, status);
+   }
 #endif
 
    //success
