@@ -23,7 +23,7 @@ public:
 
    bool full() const
    {
-      return (_count > N);
+      return (_count >= N);
    }
 
    bool empty() const
