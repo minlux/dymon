@@ -12,7 +12,7 @@
 
 
 #define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1MS   (10000)   //milli seconds send/receive timeout
+#define _SEND_RECV_TIMEOUT_1S    (10)   //milli seconds send/receive timeout
 
 
 
@@ -53,14 +53,16 @@ bool DymonLinux::connect(void * arg)
    //go back to blocking mode
    fcntl(sock, F_SETFL, flags);
    //configure send and receive timeouts
-   int sendRecvTimeout = _SEND_RECV_TIMEOUT_1MS;
-   setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendRecvTimeout, sizeof(sendRecvTimeout));
-   setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&sendRecvTimeout, sizeof(sendRecvTimeout));
+   struct timeval sendTimeout = { 0 };
+   struct timeval recvTimeout = { 0 };
+   sendTimeout.tv_sec = _SEND_RECV_TIMEOUT_1S;
+   recvTimeout.tv_sec = _SEND_RECV_TIMEOUT_1S;
+   setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(struct timeval));
+   setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(struct timeval));
 
    //wait for connection, with timeout of 2 seconds
-   struct timeval connectTimeout;
+   struct timeval connectTimeout = { 0 };
    connectTimeout.tv_sec = _CONNECT_TIMEOUT_1SEC;
-   connectTimeout.tv_usec = 0;
    fd_set writeSet;
    FD_ZERO(&writeSet);
    FD_SET(sock, &writeSet);
