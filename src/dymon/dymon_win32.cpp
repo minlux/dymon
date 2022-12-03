@@ -3,8 +3,8 @@
 #include "cJSON.h"
 #include "dymon.h"
 
-#define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1MS   (10000)   //milli seconds send/receive timeout
+#define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
+#define _SEND_RECV_TIMEOUT_1MS   (5000)   //milli seconds send/receive timeout
 
 
 //This is just a helper class.

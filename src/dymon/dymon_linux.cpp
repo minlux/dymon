@@ -11,8 +11,8 @@
 #include "dymon.h"
 
 
-#define _CONNECT_TIMEOUT_1SEC    (10)      //seconds connect timeout
-#define _SEND_RECV_TIMEOUT_1S    (10)   //milli seconds send/receive timeout
+#define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
+#define _SEND_RECV_TIMEOUT_1S    (5)   //milli seconds send/receive timeout
 
 
 

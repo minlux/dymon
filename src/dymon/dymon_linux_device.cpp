@@ -62,7 +62,7 @@ int DymonLinux::receive(uint8_t * buffer, const size_t bufferLen)
    fd_set set;
 
    //read timeout
-   timeout.tv_sec = 10;
+   timeout.tv_sec = 5;
    timeout.tv_usec = 0;
 
    //use "select" for read with timeout
