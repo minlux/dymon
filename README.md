@@ -167,3 +167,7 @@ Example:
 ## See also
 [Commands and Status](doc/cmd_status.md)
 [Labels](doc/paper_size.md)
+
+https://developers.dymo.com/#/article/1417
+
+
