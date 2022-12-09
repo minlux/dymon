@@ -17,7 +17,7 @@ static inline bool file_exist(const char * name)
 
 int main(int argc, char * argv[])
 {
-   const char * ipAddress;
+   char * ipAddress;
    const char * bitmapFile;
    int32_t bitmapWidth;
    int32_t bitmapHeight;
