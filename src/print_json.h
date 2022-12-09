@@ -29,12 +29,26 @@
 #define PRINT_H_INCLUDED
 
 #include "cJSON.h"
+#include "dymon.h"
 
 
-void * print_json_start(void * arg, uint32_t session = 1); //open connection to labelprinter
-int print_json_do(cJSON * json, void * prt); //send label to labelprinter
-void print_json_end(void * prt); //close connection to labelprinter
+class PrintJson
+{
+public:
+  PrintJson(Dymon * dymon, const char * usbDevice) : dymon(dymon), usbDevice(usbDevice) { }
 
-int print_json_p4(cJSON * json, const char * filename); //print label into a PMB (P4) file.
+  inline int start(cJSON * json) { return dymon->start(usbDevice ? (void *)usbDevice : (void *)json); }
+  int print(cJSON * json);
+  void end(void);
+
+
+  static int write_to_pmb(cJSON * json, const char * filename);
+
+private:
+  Dymon * dymon;
+  const char * usbDevice;
+};
+
+
 
 #endif

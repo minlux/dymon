@@ -34,9 +34,9 @@ int main(int argc, char * argv[])
    }
 
 #ifdef _WIN32
-   DymonWin32 dymon;
+   DymonNetWin32 dymon;
 #else
-   DymonLinux dymon;
+   DymonNet dymon;
 #endif
 
    for (int retry = 0; retry < 10; ++retry)

@@ -1,35 +1,13 @@
 #include <stdint.h>
-// #include <string.h>
-// #include <stdlib.h>
 #include <unistd.h>
-// #include <signal.h>
-// #include <fstream>
-
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-
-// #include <iostream>
-// #include <sstream>
-// #include <string>
-
-// #include <sys/types.h>
-// #include <sys/socket.h>
-// #include <netinet/in.h>
-// #include <netinet/tcp.h>
-// #include <arpa/inet.h>
-// #include <netdb.h>
-// #include <netdb.h>
-// #include <fcntl.h>
 #include "dymon.h"
 
 
 
-
-
-bool DymonLinux::connect(void * arg)
+bool DymonUsb::connect(void * arg)
 {
    //try to create socket
    const char * const device = (const char *)arg;
@@ -43,7 +21,7 @@ bool DymonLinux::connect(void * arg)
 }
 
 
-int DymonLinux::send(const uint8_t * data, const size_t dataLen, bool more)
+int DymonUsb::send(const uint8_t * data, const size_t dataLen, bool more)
 {
    //Send some data
    int status = ::write(sockfd, data, dataLen);
@@ -56,7 +34,7 @@ int DymonLinux::send(const uint8_t * data, const size_t dataLen, bool more)
 }
 
 
-int DymonLinux::receive(uint8_t * buffer, const size_t bufferLen)
+int DymonUsb::receive(uint8_t * buffer, const size_t bufferLen)
 {
    struct timeval timeout;
    fd_set set;
@@ -82,7 +60,7 @@ int DymonLinux::receive(uint8_t * buffer, const size_t bufferLen)
 
 
 
-void DymonLinux::close()
+void DymonUsb::close()
 {
    ::close(sockfd);
    sockfd = -1;

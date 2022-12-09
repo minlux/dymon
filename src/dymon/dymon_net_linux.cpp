@@ -16,7 +16,7 @@
 
 
 
-bool DymonLinux::connect(void * arg)
+bool DymonNet::connect(void * arg)
 {
    if (arg == nullptr)
    {
@@ -82,7 +82,7 @@ bool DymonLinux::connect(void * arg)
 }
 
 
-int DymonLinux::send(const uint8_t * data, const size_t dataLen, bool more)
+int DymonNet::send(const uint8_t * data, const size_t dataLen, bool more)
 {
    //Send some data
    int status = ::send(sockfd, data, dataLen, more ? MSG_MORE : 0);
@@ -95,7 +95,7 @@ int DymonLinux::send(const uint8_t * data, const size_t dataLen, bool more)
 }
 
 
-int DymonLinux::receive(uint8_t * buffer, const size_t bufferLen)
+int DymonNet::receive(uint8_t * buffer, const size_t bufferLen)
 {
    //Receive a reply from the server
    int status = ::recv(sockfd, buffer, bufferLen, 0);
@@ -107,7 +107,7 @@ int DymonLinux::receive(uint8_t * buffer, const size_t bufferLen)
 }
 
 
-void DymonLinux::close()
+void DymonNet::close()
 {
    ::close(sockfd);
    sockfd = -1;

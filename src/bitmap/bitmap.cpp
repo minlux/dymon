@@ -44,7 +44,7 @@ void Bitmap::init(const uint32_t width, const uint32_t height, enum Orientation 
    this->font = font;
 
    //allocate buffer for bitmap (and clear it to zero)
-   this->data = new uint8_t[this->lengthByte];
+   this->data = new uint8_t[this->lengthByte + 4]; //i allocate 4 extra bytes for utilized by dymon as scratchpad
    memset(this->data, 0, this->lengthByte);
 
    //create glyph iterator

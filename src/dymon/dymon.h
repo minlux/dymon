@@ -21,9 +21,9 @@ class Dymon
 {
 public:
    Dymon(uint32_t session) { this->session = session, index = 0; }
-   int start(void * arg); //create connection to LabelWriter
+   int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a cJSON object, with a string attribute "ip"; For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
-   int print(const Bitmap * bitmap, double labelLength1mm); //print Label (can be called several times to print multiple labels)
+   int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
    void _debugEnd(); //close without form feed
@@ -53,15 +53,14 @@ private:
 
 
 
-//shall handle timeouts
-class  DymonWin32 : public Dymon
+class DymonNet : public Dymon
 {
 public:
-   DymonWin32(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
+   DymonNet(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!
-   bool connect(void * arg);
+   bool connect(void * arg); //arg: cJSON *
    int send(const uint8_t * data, const size_t dataLen, bool more = false);
    int receive(uint8_t * buffer, const size_t bufferLen);
    void close();
@@ -73,24 +72,23 @@ private:
 
 
 
-//shall handle timeouts
-class  DymonLinux : public Dymon
+class DymonUsb : public Dymon
 {
 public:
-   DymonLinux(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
+   DymonUsb(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!
-   bool connect(void * arg);
+   bool connect(void * arg); //arg: const char * devicePath
    int send(const uint8_t * data, const size_t dataLen, bool more = false);
    int receive(uint8_t * buffer, const size_t bufferLen);
    void close();
-   void sleep1ms(uint32_t millis);
-   uint32_t inetAddr(const char * host); //returns the ipV4 address of the given host (0 in case of error)
+
 
 private:
    int sockfd;
 };
+
 
 
 

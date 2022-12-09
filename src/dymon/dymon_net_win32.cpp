@@ -30,7 +30,7 @@ static WsaHelper _wasHelper;
 
 
 
-bool DymonWin32::connect(void * arg)
+bool DymonNet::connect(void * arg)
 {
    if (arg == nullptr)
    {
@@ -95,7 +95,7 @@ bool DymonWin32::connect(void * arg)
 }
 
 
-int DymonWin32::send(const uint8_t * data, const size_t dataLen, bool more)
+int DymonNet::send(const uint8_t * data, const size_t dataLen, bool more)
 {
    //Send some data
    int status = ::send(sockfd, (const char *)data, dataLen, 0); //there is no MSG_MORE flag in windows, but it works anyway :-)
@@ -107,7 +107,7 @@ int DymonWin32::send(const uint8_t * data, const size_t dataLen, bool more)
 }
 
 
-int DymonWin32::receive(uint8_t * buffer, const size_t bufferLen)
+int DymonNet::receive(uint8_t * buffer, const size_t bufferLen)
 {
    //Receive a reply from the server
    int status = ::recv(sockfd, (char *)buffer, bufferLen, 0);
@@ -119,7 +119,7 @@ int DymonWin32::receive(uint8_t * buffer, const size_t bufferLen)
 }
 
 
-void DymonWin32::close()
+void DymonNet::close()
 {
    closesocket(sockfd);
    sockfd = -1;
