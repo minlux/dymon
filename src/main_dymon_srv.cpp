@@ -72,7 +72,7 @@ int main(int argc, char * argv[])
 
 
    //evaluate command line arguments
-   //get interface and path
+   //get interfaze and path
    if ((argc >= 2) && (strncmp(argv[1], "usb:", 4) == 0))
    {
       const char * path;

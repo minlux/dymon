@@ -29,7 +29,7 @@ int main(int argc, char * argv[])
    enum {
       NET = 0,
       USB
-   } interface;
+   } interfaze;
    char * path;
 
    if (argc < 6)
@@ -42,14 +42,14 @@ int main(int argc, char * argv[])
    //get interface and path
    if (strncmp(argv[1], "net:", 4) == 0)
    {
-      interface = NET;
+      interfaze = NET;
       cJSON * json = cJSON_CreateObject();
       cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
       path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
    else if (strncmp(argv[1], "usb:", 4) == 0)
    {
-      interface = USB;
+      interfaze = USB;
    #ifdef _WIN32
       //get the device name, to be used on windows
       //
@@ -73,11 +73,11 @@ int main(int argc, char * argv[])
 
 
    Dymon * dymon;
-   if (interface == NET)
+   if (interfaze == NET)
    {
       dymon = new DymonNet;
    }
-   else //interface == USB
+   else //interfaze == USB
    {
       dymon = new DymonUsb;
    }
