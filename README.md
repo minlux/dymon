@@ -4,7 +4,7 @@ Command line tools and printserver (webserver) for DYMO LabelWriter Wireless.
 ![dymon_srv](doc/lw.jpg)
 
 This project implements 3 applications:
-- `dymon_cli` and `dymon_pmb` allows printing of labels from command line.
+- `dymon_cli` and `dymon_pbm` allows printing of labels from command line.
 - `dymon_srv` implements a webserver, that allows printing of labels through a REST-API. In addition it serves a site (which is using this REST-API) that allows label printing from by a web form:
 
 ![dymon_srv](doc/webif.png)
@@ -109,33 +109,39 @@ Build process is based on CMake.
 ## Usage
 ### dymon_cli
 The `dymon_cli` tool expects its input via command line argument:
-- 1st argument: the IP of the *LabelWriter* in the local network
+- 1st argument:
+   - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
+   - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
 - 2nd argument: the labels *title* line
 - 3rd/4th argument: label *body* lines
 - 5th argument: EAN8 barcode value (max 7 digits. a checksum char is added automatically).
 
 Example:
 ```
-./dymon_cli "192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
+./dymon_cli "net:192.168.178.49" "Headline is bigger" "than the following..." "...two body lines" 1234567
+./dymon_cli "usb:/dev/usb/lp0" "USB DYMO" "on" "Linux" 1234567
+./dymon_cli "usb:vid_0922" "USB DYMO" "on" "Windows" 1234567
 ```
 
 
-### dymon_pmb
-`dymon_pmb` is a command line tool, that allows to print *pmb P4* image files. on the *LabelWriter*.
+### dymon_pbm
+`dymon_pbm` is a command line tool, that allows to print *pbm P4* image files. on the *LabelWriter*.
 The tool expects the following arguments:
-- 1st argument: the IP of the *LabelWriter* in the local network
-- 2th argument: full path to the bitmap file
+- 1st argument:
+   - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
+   - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
+- 2nd argument: full path to the bitmap file
 
 In folder `doc` you can find some example files that can be printed (on the respective lables) like this:
 ```
-./dymon_pmb 192.168.178.23 ../doc/label_25x25.pbm
-./dymon_pmb 192.168.178.23 ../doc/manu_25x25.pbm
-./dymon_pmb 192.168.178.23 ../doc/eagle_25x25.pbm
-./dymon_pmb 192.168.178.23 ../doc/eagle_36x89.pbm
+./dymon_pbm net:192.168.178.23 ../doc/label_25x25.pbm
+./dymon_pbm net:192.168.178.23 ../doc/manu_25x25.pbm
+./dymon_pbm net:/dev/usb/lp0   ../doc/eagle_25x25.pbm
+./dymon_pbm net:vid_0922       ../doc/eagle_36x89.pbm
 ```
 
-You can use *GIMP* to convert regular image files into pmb files. Therefore just *export* your image as `filename.pbm` and store it as *raw* pmb.
-You can also use *Imagemagick* to convert a file into pmb. For example:
+You can use *GIMP* to convert regular image files into pbm files. Therefore just *export* your image as `filename.pbm` and store it as *raw* pbm.
+You can also use *Imagemagick* to convert a file into pbm. For example:
 ```
 convert your_pic.jpg your_pic.pbm
 ```
@@ -152,12 +158,20 @@ convert -resize 272x252 -extent 272x252 -gravity center logo.svg logo.pbm
 
 
 ### dymon_srv
-`dymon_srv` implements a HTTP-webserver. It TCP port, the webserver is listening to can be set with the first command line argument (default: 8092).
+`dymon_srv` implements a HTTP-webserver. User can pass two optional arguments like `dymon_srv [<usb>] [-p <port>]`.
+```
+- 1st argument:
+   - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
+   - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
+- 2nd argument: TCP port number of the webserver (default: 8092)
+
 Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).
 
 Example:
 ```
-./dymon_srv 8092
+./dymon_srv
+./dymon_srv -p 8093
+./dymon_srv usb:/dev/usb/lp0 -p 8093
 ```
 
 ![dymon_srv](doc/webif.png)
