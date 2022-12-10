@@ -218,23 +218,28 @@ static void m_print_thread()
 static void m_print_labels(cJSON * labels)
 {
    cJSON * label;
+   int err = -1;
 
    //start label printing
    //use the IP given in the first label to connect to the LabelWriter
    cJSON_ArrayForEach(label, labels)
    {
-      printJson->start(label);
+      err = printJson->start(label);
       break;
    }
 
    //start printing the labels (all labels will be printed by the LabelWriter given by the IP of the first label)
-   cJSON_ArrayForEach(label, labels)
+   if (err == 0)
    {
-      //print requested label
-      int status = printJson->print(label);
-      if (label->next != nullptr)
+      cJSON_ArrayForEach(label, labels)
       {
-         this_thread::sleep_for(chrono::microseconds(500)); //delay between the single labels
+         //print requested label
+         err = printJson->print(label);
+         if (err != 0) break;
+         if (label->next != nullptr)
+         {
+            this_thread::sleep_for(chrono::microseconds(500)); //delay between the single labels
+         }
       }
    }
 

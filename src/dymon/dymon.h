@@ -20,13 +20,13 @@ extern "C" {
 class Dymon
 {
 public:
-   Dymon(uint32_t session) { this->session = session, index = 0; }
+   Dymon(uint32_t session) : connected(false), session(session), index(0) { }
    int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a cJSON object, with a string attribute "ip"; For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
    int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
-   void _debugEnd(); //close without form feed
+   // void _debugEnd(); //close without form feed
 
    //status information (are read/updated in 'start', 'read_status' and at the end of 'print/print_bitmap')
    inline bool paperOut() { return (status[15] != 0); } //no label in printer
@@ -46,6 +46,7 @@ private:
    static const uint8_t _labelIndexHeightWidth[];
    static const uint8_t _labelFeedStatus[];
    static const uint8_t _final[];
+   bool connected;
    uint32_t session;
    uint16_t index;
    uint8_t status[32];

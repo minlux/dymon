@@ -161,14 +161,6 @@ int PrintJson::print(cJSON * json)
 }
 
 
-//finalize printing
-void PrintJson::end(void)
-{
-   dymon->end(); //this executes the final form feed
-}
-
-
-
 
 /*
    Print a label into a PMB file (P4 formate).

@@ -35,18 +35,19 @@
 class PrintJson
 {
 public:
-  PrintJson(Dymon * dymon, const char * usbDevice) : dymon(dymon), usbDevice(usbDevice) { }
+  PrintJson(Dymon * dymon, const char * device) : dymon(dymon), device(device) { }
+  // ~PrintJson() { delete dymon; }
 
-  inline int start(cJSON * json) { return dymon->start(usbDevice ? (void *)usbDevice : (void *)json); }
+  inline int start(cJSON * json) { return dymon->start(device ? (void *)device : (void *)json); }
   int print(cJSON * json);
-  void end(void);
+  inline void end(void) { dymon->end(); }
 
 
   static int write_to_pbm(cJSON * json, const char * filename);
 
 private:
   Dymon * dymon;
-  const char * usbDevice;
+  const char * device;
 };
 
 

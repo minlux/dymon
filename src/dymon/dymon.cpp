@@ -69,13 +69,13 @@ int Dymon::start(void * arg)
    };
 
    //create TCP socket and connect to LabelWriter
-   int status = this->connect(arg);
-   if (status == 0)
+   connected = this->connect(arg);
+   if (connected == false)
    {
       return -2;
    }
    //request LabelWriter status (active)
-   status = this->send(_statusRequest, sizeof(_statusRequest));
+   int status = this->send(_statusRequest, sizeof(_statusRequest));
    if (status <= 0)
    {
       return -3;
@@ -306,20 +306,30 @@ int Dymon::print_bitmap(const char * file)
 
 void Dymon::end()
 {
-   //send final form-feed command data
-   this->send(_final, sizeof(_final));
-   //close socket
-   this->close();
+   if (connected)
+   {
+      //send final form-feed command data
+      this->send(_final, sizeof(_final));
+      //close socket
+      this->close();
+      connected = false;
+   }
 }
 
 
+#if 0
 void Dymon::_debugEnd()
 {
-   //send final form-feed command data
-   this->send(&_final[2], sizeof(_final) - 2);
-   //close socket
-   this->close();
+   if (connected)
+   {
+      //send final form-feed command data
+      this->send(&_final[2], sizeof(_final) - 2);
+      //close socket
+      this->close();
+      connected = false;
+   }
 }
+#endif
 
 
 
