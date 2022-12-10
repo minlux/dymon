@@ -1,5 +1,5 @@
 # dymon
-Command line tools and printserver (webserver) for DYMO LabelWriter Wireless.
+Command line tools and printserver (webserver) for DYMO LabelWriter (Wireless and USB).
 
 ![dymon_srv](doc/lw.jpg)
 
