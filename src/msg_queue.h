@@ -3,8 +3,8 @@
    One task can push data into the queue. Another thread is waiting for the data to pop them out of the queue.
 */
 
-#ifndef MSGQUEUE_H
-#define MSGQUEUE_H
+#ifndef MSG_QUEUE_H
+#define MSG_QUEUE_H
 
 #include <mutex>
 #include <condition_variable>

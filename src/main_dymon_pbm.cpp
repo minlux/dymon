@@ -6,6 +6,7 @@
 #include "FreeSans15pt7b.h"
 #include "FreeSans18pt7b.h"
 #include "usbprint.h"
+#include "cJSON.h"
 
 
 using namespace std;
@@ -20,12 +21,12 @@ static inline bool file_exist(const char * name)
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << "./dymon_bmp <ip>|<usb> <bitmap-file>\n\n";
+   cout << " dymon_pbm <net>|<usb> <bitmap-file>\n\n";
 
    cout << "Examples:\n";
-   cout << "./dymon_bmp net#192.168.178.23 <bitmap-file>\n";
-   cout << "./dymon_bmp usb#/dev/usb/lp0 <bitmap-file>\n";
-   cout << "./dymon_bmp usb#vid_0922 <bitmap-file>\n";
+   cout << " dymon_pbm net:192.168.178.23 <bitmap-file>\n";
+   cout << " dymon_pbm usb:/dev/usb/lp0 <bitmap-file>\n";
+   cout << " dymon_pbm usb:vid_0922 <bitmap-file>\n";
    cout << endl;
 }
 
@@ -47,12 +48,14 @@ int main(int argc, char * argv[])
    }
 
    //get interface and path
-   if (strncmp(argv[1], "net#", 4) == 0)
+   if (strncmp(argv[1], "net:", 4) == 0)
    {
       interface = NET;
-      path = &argv[1][4]; //get substring -> ip-address expected
+      cJSON * json = cJSON_CreateObject();
+      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
+      path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
-   else if (strncmp(argv[1], "usb#", 4) == 0)
+   else if (strncmp(argv[1], "usb:", 4) == 0)
    {
       interface = USB;
    #ifdef _WIN32

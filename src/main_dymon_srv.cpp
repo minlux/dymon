@@ -19,8 +19,9 @@
 #include <iostream>
 #include <thread>
 #include "httplib.h"
-#include "msgqueue.h"
+#include "msg_queue.h"
 #include "print_json.h"
+#include "usbprint.h"
 
 
 /* -- Defines ------------------------------------------------------------- */
@@ -52,13 +53,13 @@ static PrintJson * printJson;
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << "./dymon_srv [<usb>] [-p <port>]\n\n";
+   cout << " dymon_srv [<usb>] [-p <port>]\n\n";
 
    cout << "Examples:\n";
-   cout << "./dymon_srv\n";
-   cout << "./dymon_srv -p 9000\n";
-   cout << "./dymon_srv usb#/dev/usb/lp0 <bitmap-file>\n";
-   cout << "./dymon_srv usb#vid_0922 <bitmap-file> -p 8093\n";
+   cout << " dymon_srv\n";
+   cout << " dymon_srv -p 9000\n";
+   cout << " dymon_srv usb:/dev/usb/lp0 <bitmap-file>\n";
+   cout << " dymon_srv usb:vid_0922 <bitmap-file> -p 8093\n";
    cout << endl;
 }
 
@@ -72,7 +73,7 @@ int main(int argc, char * argv[])
 
    //evaluate command line arguments
    //get interface and path
-   if (strncmp(argv[1], "usb#", 4) == 0)
+   if ((argc >= 2) && (strncmp(argv[1], "usb:", 4) == 0))
    {
       const char * path;
    #ifdef _WIN32

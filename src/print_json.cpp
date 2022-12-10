@@ -185,7 +185,7 @@ void PrintJson::end(void)
       "barcode":1234567
    }
 */
-int PrintJson::write_to_pmb(cJSON * json, const char * filename)
+int PrintJson::write_to_pbm(cJSON * json, const char * filename)
 {
    Bitmap bitmap;
    int error = _getBitmap(json, bitmap);

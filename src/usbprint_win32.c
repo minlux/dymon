@@ -24,7 +24,7 @@ SS_DEFINE_GUID(GUID_DEVINTERFACE_USBPRINT, 0x28d78fad, 0x5a12, 0x11D1, 0xae, 0x5
 //0 on success
 //-1, -2 in case of API errors
 //-3 none of the devices matches the given device-identifer
-int usbprint_utils_get_devicename(char buffer[], unsigned int bufsize, const char *deviceIdentifier)
+int usbprint_get_devicename(char buffer[], unsigned int bufsize, const char *deviceIdentifier)
 {
    buffer[0] = 0; //preset
 

@@ -5,6 +5,7 @@
 #include "FreeSans15pt7b.h"
 #include "FreeSans18pt7b.h"
 #include "usbprint.h"
+#include "cJSON.h"
 
 
 using namespace std;
@@ -13,12 +14,12 @@ using namespace std;
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << "./dymon_cli <ip>|<usb> <title> <line1> <line2> <barcode>" << endl;
+   cout << " dymon_cli <net>|<usb> <title> <line1> <line2> <barcode>\n\n";
 
    cout << "Examples:\n";
-   cout << "./dymon_cli net#192.168.178.23 DYMO-Wireless Hello World 13\n";
-   cout << "./dymon_cli usb#/dev/usb/lp0 DYMO-LW-550 on Linux 14\n";
-   cout << "./dymon_cli usb#vid_0922 DYMO-LW-550 on Windows 15\n";
+   cout << " dymon_cli net:192.168.178.23 DYMO-Wireless Hello World 13\n";
+   cout << " dymon_cli usb:/dev/usb/lp0 DYMO-LW-550 on Linux 14\n";
+   cout << " dymon_cli usb:vid_0922 DYMO-LW-550 on Windows 15\n";
    cout << endl;
 }
 
@@ -39,12 +40,14 @@ int main(int argc, char * argv[])
 
 
    //get interface and path
-   if (strncmp(argv[1], "net#", 4) == 0)
+   if (strncmp(argv[1], "net:", 4) == 0)
    {
       interface = NET;
-      path = &argv[1][4]; //get substring -> ip-address expected
+      cJSON * json = cJSON_CreateObject();
+      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
+      path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
-   else if (strncmp(argv[1], "usb#", 4) == 0)
+   else if (strncmp(argv[1], "usb:", 4) == 0)
    {
       interface = USB;
    #ifdef _WIN32
@@ -102,7 +105,7 @@ int main(int argc, char * argv[])
 
    //EAN8 Barcode
    y += font->yAdvance / 2; //add "margin" of 0.5 lines to previous text/barcode
-   bitmap.drawBarcode(y, 2*font->yAdvance, atoi(argv[5]), 1.0); //zentriert auf die ganze Breite
+   bitmap.drawBarcode(y, 2*font->yAdvance, atoi(argv[5]), 0.9); //zentriert auf die ganze Breite
 
 
    //print label

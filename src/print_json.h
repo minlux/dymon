@@ -42,7 +42,7 @@ public:
   void end(void);
 
 
-  static int write_to_pmb(cJSON * json, const char * filename);
+  static int write_to_pbm(cJSON * json, const char * filename);
 
 private:
   Dymon * dymon;
