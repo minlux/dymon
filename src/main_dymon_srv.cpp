@@ -58,8 +58,8 @@ static void usage(void)
    cout << "Examples:\n";
    cout << " dymon_srv\n";
    cout << " dymon_srv -p 9000\n";
-   cout << " dymon_srv usb:/dev/usb/lp0 <bitmap-file>\n";
-   cout << " dymon_srv usb:vid_0922 <bitmap-file> -p 8093\n";
+   cout << " dymon_srv usb:/dev/usb/lp0\n";
+   cout << " dymon_srv usb:vid_0922 -p 8093\n";
    cout << endl;
 }
 
