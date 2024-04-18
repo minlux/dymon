@@ -1,6 +1,6 @@
 #include <cstring>
 #include "bitmap.h"
-#include "barcodeEan8.h"
+
 
 
 
@@ -144,43 +144,6 @@ int Bitmap::drawText(const uint32_t x, const uint32_t y, const char * text)
    }
 
    return width;
-}
-
-
-
-void Bitmap::drawBarcode(const uint32_t y, const uint32_t height, const uint32_t value, double scale)
-{
-   if (height > 0)
-   {
-      uint8_t barcode[9];
-      uint32_t barcodeLength;
-      uint32_t scaleFactor;
-      uint32_t cursor;
-      uint32_t pixel;
-
-      //get encode barcode
-      barcodeLength = BarcodeEan8::intToBarcode(value, barcode);
-
-      //calculate a scale factor
-      uint32_t width = ((orientation == Orientation::Horizontally) ? this->width : this->height);
-      scaleFactor = (uint32_t)((scale * width) / barcodeLength);
-      //calculate initial cursor position
-      cursor = (width - (scaleFactor * barcodeLength)) / 2;
-
-      //draw one barcode line
-      for (uint32_t i = 0; i < barcodeLength; ++i)
-      {
-         bool value = ((barcode[i/8] & (0x80 >> (i & 7))) != 0); //get respective bit
-         for (uint32_t j = 0; j < scaleFactor; ++j)
-         {
-            pixel = (uint32_t)getPixelIndex(cursor++, y);
-            setPixelValue(pixel, value);
-         }
-      }
-
-      //duplicate that line (height - 1)-times
-      duplicateLineDown(y, height - 1);
-   }
 }
 
 

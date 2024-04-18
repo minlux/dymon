@@ -1,5 +1,0 @@
-To convert a file into a C char array, use the linux command line tool "xxd".
-E.g.
-```
-xxd -i ./index.html > ../src/index_html.c
-```
