@@ -34,7 +34,6 @@ static void usage(void)
 int main(int argc, char * argv[])
 {
    enum {
-      NET = 0,
       USB
    } interfaze;
    char * path;
@@ -48,14 +47,8 @@ int main(int argc, char * argv[])
    }
 
    //get interface and path
-   if (strncmp(argv[1], "net:", 4) == 0)
-   {
-      interfaze = NET;
-      cJSON * json = cJSON_CreateObject();
-      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
-      path = (char *)json; //pass this to DymonNet::start, which expects a json object
-   }
-   else if (strncmp(argv[1], "usb:", 4) == 0)
+
+   if (strncmp(argv[1], "usb:", 4) == 0)
    {
       interfaze = USB;
    #ifdef _WIN32
@@ -88,14 +81,11 @@ int main(int argc, char * argv[])
    }
 
    Dymon * dymon;
-   if (interfaze == NET)
-   {
-      dymon = new DymonNet;
-   }
-   else //interfaze == USB
+   if (interfaze == USB)
    {
       dymon = new DymonUsb;
    }
+
 
 
 

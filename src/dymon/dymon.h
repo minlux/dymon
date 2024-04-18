@@ -54,22 +54,6 @@ private:
 
 
 
-class DymonNet : public Dymon
-{
-public:
-   DymonNet(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
-
-private:
-   //TCP access functions. Must be implemented in derived class!
-   bool connect(void * arg); //arg: cJSON *
-   int send(const uint8_t * data, const size_t dataLen, bool more = false);
-   int receive(uint8_t * buffer, const size_t bufferLen);
-   void close();
-
-
-private:
-   int sockfd;
-};
 
 
 
