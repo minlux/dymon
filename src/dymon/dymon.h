@@ -20,7 +20,7 @@ extern "C" {
 class Dymon
 {
 public:
-   Dymon(uint32_t session) : connected(false), session(session), index(0) { }
+   Dymon(uint32_t session) : connected(false), lw450flavor(false), session(session), index(0) { }
    int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a cJSON object, with a string attribute "ip"; For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
@@ -47,6 +47,7 @@ private:
    static const uint8_t _labelFeedStatus[];
    static const uint8_t _final[];
    bool connected;
+   bool lw450flavor;
    uint32_t session;
    uint16_t index;
    uint8_t status[32];
