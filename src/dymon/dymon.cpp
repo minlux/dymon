@@ -74,7 +74,7 @@ int Dymon::start(void * arg)
    static const uint8_t _statusRequest[] = {
       0x1B, 0x41, 1    //(A) Get printer status
    };
-   uint8_t buffer[12];
+   uint8_t buffer[12] = { 0 };
    int status;
 
    //create TCP socket and connect to LabelWriter
@@ -84,25 +84,23 @@ int Dymon::start(void * arg)
       return -2;
    }
 
+#if 0 //LW550 doesn't answer to that request. so receive blocks until timeout which slows down usage
    //do soft reset and request LabelWriter model number and firmware version
    status = this->send(_setupRequest, sizeof(_setupRequest));
    if (status <= 0)
    {
       return -3;
    }
-   status = this->receive(buffer, sizeof(buffer) - 1); //The information is returned as a 10- character ASCII string in the following format:
+   this->receive(buffer, sizeof(buffer) - 1); //The information is returned as a 10- character ASCII string in the following format:
                                                          //Bytes[0..6]: 7 digit model number (e.g. "1750111");
                                                          //byte[7]: ascii char 'v'
                                                          //Bytes[8..9]: the two digit firmware version (e.g. "0N")
                                                        //See https://www.dymo-label-printers.co.uk/news/list-of-dymo-model-numbers.html for list of model numbers
-   if (status <= 0)
-   {
-      return -4;
-   }
    if (memcmp(buffer, "175", 3) == 0) //some kind of Labelwriter 450
    {
       this->lw450flavor = true;
    }
+#endif
 
    //request LabelWriter status (active)
    status = this->send(_statusRequest, sizeof(_statusRequest));

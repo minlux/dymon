@@ -14,7 +14,7 @@ using namespace std;
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << " dymon_cli <net>|<usb> <title> <line1> <line2> <barcode>\n\n";
+   cout << " dymon_cli <net>|<usb>|<usb450> <title> <line1> <line2> <barcode>\n\n";
 
    cout << "Examples:\n";
    cout << " dymon_cli net:192.168.178.23 DYMO-Wireless Hello World 13\n";
@@ -31,6 +31,7 @@ int main(int argc, char * argv[])
       USB
    } interfaze;
    char * path;
+   bool lw450 = false;
 
    if (argc < 6)
    {
@@ -47,9 +48,10 @@ int main(int argc, char * argv[])
       cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
       path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
-   else if (strncmp(argv[1], "usb:", 4) == 0)
+   else if ((strncmp(argv[1], "usb:", 4) == 0) || (strncmp(argv[1], "usb450:", 7) == 0))
    {
       interfaze = USB;
+      lw450 == (strncmp(argv[1], "usb450:", 7) == 0);
    #ifdef _WIN32
       //get the device name, to be used on windows
       //
@@ -79,7 +81,7 @@ int main(int argc, char * argv[])
    }
    else //interfaze == USB
    {
-      dymon = new DymonUsb;
+      dymon = new DymonUsb(1, lw450);
    }
 
 

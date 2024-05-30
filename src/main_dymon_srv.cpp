@@ -53,12 +53,13 @@ static PrintJson * printJson;
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << " dymon_srv [<usb>] [-p <port>]\n\n";
+   cout << " dymon_srv [<usb>|<usb450>] [-p <port>]\n\n";
 
    cout << "Examples:\n";
    cout << " dymon_srv\n";
    cout << " dymon_srv -p 9000\n";
    cout << " dymon_srv usb:/dev/usb/lp0\n";
+   cout << " dymon_srv usb450:/dev/usb/lp1\n";
    cout << " dymon_srv usb:vid_0922 -p 8093\n";
    cout << endl;
 }
@@ -72,9 +73,24 @@ int main(int argc, char * argv[])
 
 
    //evaluate command line arguments
-   //get interfaze and path
-   if ((argc >= 2) && (strncmp(argv[1], "usb:", 4) == 0))
+   //-p <tcp-port>
+   uint16_t port = 8092;
+   for (int i = 1; i < (argc - 1); ++i)
    {
+      if ((argv[i][0] == '-') && (argv[i][1] == 'p'))
+      {
+         uint16_t p = (uint16_t)atoi(argv[i + 1]);
+         if (p != 0)
+         {
+            port = p;
+         }
+         break;
+      }
+   }
+   //get interfaze and path
+   if ((argc >= 2) && ((strncmp(argv[1], "usb:", 4) == 0) || (strncmp(argv[1], "usb450:", 7) == 0)))
+   {
+      const bool lw450 = (strncmp(argv[1], "usb450:", 7) == 0);
       const char * path;
    #ifdef _WIN32
       //get the device name, to be used on windows
@@ -90,27 +106,14 @@ int main(int argc, char * argv[])
    #else
       path = &argv[1][4]; //get substring -> device-path expected (something like "/dev/usb/lp0")
    #endif
-      printJson = new PrintJson(new DymonUsb, path);
+      printJson = new PrintJson(new DymonUsb(1, lw450), path);
    }
    else //net
    {
       printJson = new PrintJson(new DymonNet, nullptr);
    }
 
-   //-p <tcp-port>
-   uint16_t port = 8092;
-   for (int i = 1; i < (argc - 1); ++i)
-   {
-      if ((argv[i][0] == '-') && (argv[i][1] == 'p'))
-      {
-         uint16_t p = (uint16_t)atoi(argv[i + 1]);
-         if (p != 0)
-         {
-            port = p;
-         }
-         break;
-      }
-   }
+
 
 
    //greetings

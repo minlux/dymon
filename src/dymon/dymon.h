@@ -20,7 +20,7 @@ extern "C" {
 class Dymon
 {
 public:
-   Dymon(uint32_t session) : connected(false), lw450flavor(false), session(session), index(0) { }
+   Dymon(uint32_t session, bool lw450) : connected(false), lw450flavor(lw450), session(session), index(0) { }
    int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a cJSON object, with a string attribute "ip"; For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
@@ -58,7 +58,7 @@ private:
 class DymonNet : public Dymon
 {
 public:
-   DymonNet(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
+   DymonNet(uint32_t session = 1) : Dymon(session, false) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!
@@ -77,7 +77,7 @@ private:
 class DymonUsb : public Dymon
 {
 public:
-   DymonUsb(uint32_t session = 1) : Dymon(session) { sockfd = -1; };
+   DymonUsb(uint32_t session = 1, bool lw450 = false) : Dymon(session, lw450) { sockfd = -1; };
 
 private:
    //TCP access functions. Must be implemented in derived class!

@@ -21,11 +21,12 @@ static inline bool file_exist(const char * name)
 static void usage(void)
 {
    cout << "Usage:\n";
-   cout << " dymon_pbm <net>|<usb> <bitmap-file>\n\n";
+   cout << " dymon_pbm <net>|<usb>|<usb450> <bitmap-file>\n\n";
 
    cout << "Examples:\n";
    cout << " dymon_pbm net:192.168.178.23 <bitmap-file>\n";
    cout << " dymon_pbm usb:/dev/usb/lp0 <bitmap-file>\n";
+   cout << " dymon_pbm usb450:/dev/usb/lp1 <bitmap-file>\n";
    cout << " dymon_pbm usb:vid_0922 <bitmap-file>\n";
    cout << endl;
 }
@@ -39,6 +40,7 @@ int main(int argc, char * argv[])
    } interfaze;
    char * path;
    const char * bitmapFile;
+   bool lw450 = false;
 
 
    if (argc < 3)
@@ -55,9 +57,10 @@ int main(int argc, char * argv[])
       cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
       path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
-   else if (strncmp(argv[1], "usb:", 4) == 0)
+   else if ((strncmp(argv[1], "usb:", 4) == 0) || (strncmp(argv[1], "usb450:", 7) == 0))
    {
       interfaze = USB;
+      lw450 == (strncmp(argv[1], "usb450:", 7) == 0);
    #ifdef _WIN32
       //get the device name, to be used on windows
       //
@@ -94,7 +97,7 @@ int main(int argc, char * argv[])
    }
    else //interfaze == USB
    {
-      dymon = new DymonUsb;
+      dymon = new DymonUsb(1, lw450);
    }
 
 
