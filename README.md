@@ -112,6 +112,7 @@ The `dymon_cli` tool expects its input via command line argument:
 - 1st argument:
    - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
    - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
+   - the path to *LabelWriter450* (like `usb450:/dev/usb/lp` on linux, or `usb450:vid_0922` on windows)
 - 2nd argument: the labels *title* line
 - 3rd/4th argument: label *body* lines
 - 5th argument: EAN8 barcode value (max 7 digits. a checksum char is added automatically).
@@ -130,6 +131,7 @@ The tool expects the following arguments:
 - 1st argument:
    - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
    - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
+   - the path to *LabelWriter450* (like `usb450:/dev/usb/lp` on linux, or `usb450:vid_0922` on windows)
 - 2nd argument: full path to the bitmap file
 
 In folder `doc` you can find some example files that can be printed (on the respective lables) like this:
@@ -163,6 +165,7 @@ convert -resize 272x252 -extent 272x252 -gravity center logo.svg logo.pbm
 - 1st argument:
    - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
    - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
+   - the path to *LabelWriter450* (like `usb450:/dev/usb/lp` on linux, or `usb450:vid_0922` on windows)
 - 2nd argument: TCP port number of the webserver (default: 8092)
 
 Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).
@@ -183,5 +186,5 @@ Example:
 [Labels](doc/paper_size.md)
 
 https://developers.dymo.com/#/article/1417
-
+https://www.minlux.de
 
