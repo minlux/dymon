@@ -161,7 +161,8 @@ convert -resize 272x252 -extent 272x252 -gravity center logo.svg logo.pbm
 
 ### dymon_srv
 `dymon_srv` implements a HTTP-webserver. User can pass two optional arguments like `dymon_srv [<usb>] [-p <port>]`.
-```
+
+
 - 1st argument:
    - the IP of the *LabelWriter* in the local network (like `net:192.168.178.23`)
    - the path to the USB *LabelWriter* (like `usb:/dev/usb/lp` on linux, or `usb:vid_0922` on windows)
@@ -182,9 +183,8 @@ Example:
 
 
 ## See also
-[Commands and Status](doc/cmd_status.md)
-[Labels](doc/paper_size.md)
-
-https://developers.dymo.com/#/article/1417
-https://www.minlux.de
+- [Commands and Status](doc/cmd_status.md)
+- [Labels](doc/paper_size.md)
+- [DYMO Developer SDK Support Blog](https://developers.dymo.com/#/article/1417)
+- [minlux - Home](https://www.minlux.de)
 
