@@ -194,6 +194,25 @@ This will print a label like:
 ![dymon_srv_label](doc/dymon_srv.png)
 
 
+### txt2pbm
+
+```
+Convert text to P4 portable bitmap.
+
+Usage: txt2pbm
+ [-vr] [--help] -w <PIXEL> -h <HEIGHT> [-c <TEXT>] -o <OUTPUT> [<INPUT>]
+
+Options:
+  --help                    Print help and exit
+  -v, --version             Print version and exit
+  -w, --width=<PIXEL>       Width of PBM
+  -h, --height=<HEIGHT>     Height of PBM
+  -c, --comment=<TEXT>      Comment, embedded into PBM
+  -r, --rotate              Rotate final PBM by 90 degrees
+  -o, --output=<OUTPUT>     Output PBM file (use '-' for stdout)
+  <INPUT>                   Input text file [default: stdin]
+```
+
 ## See also
 - [Commands and Status](doc/cmd_status.md)
 - [Labels](doc/paper_size.md)
