@@ -213,6 +213,17 @@ Options:
   <INPUT>                   Input text file [default: stdin]
 ```
 
+You can use a minimal markup language to format each line of the input text.
+It supports the same format specifier as `dymon_srv` (in fact both tools use the same "text processor").
+Format specifier starts at the beginning of every line with a backslash `\`
+followed by one or more of the following options:
+
+- *NUMBER*: specify font size (15, 18, 21, 24), line width (pixels) or barcode weight
+- `l`/`c`/`r`: specify horizontal text alighment (left, centered, right)
+- `_`: to draw a horizontal line
+- `#`: to draw a qrcode with the following value
+
+
 ## See also
 - [Commands and Status](doc/cmd_status.md)
 - [Labels](doc/paper_size.md)
