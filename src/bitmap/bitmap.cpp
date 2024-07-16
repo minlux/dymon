@@ -71,7 +71,7 @@ void Bitmap::setOrientation(enum Orientation orientation)
 }
 
 
-uint32_t Bitmap::getTextWidth(const char * text)
+uint32_t Bitmap::getTextWidth(const char * text) const
 {
    char character;
    uint32_t width;
@@ -93,11 +93,11 @@ uint32_t Bitmap::getTextWidth(const char * text)
 
 
 
-int Bitmap::drawText(const uint32_t x, const uint32_t y, const char * text)
+int Bitmap::drawText(const int32_t x, const int32_t y, const char * text)
 {
-   uint32_t cursor;
+   int32_t cursor;
    int32_t pixel;
-   uint32_t width;
+   int32_t width;
    int character;
    bool status;
 
@@ -115,23 +115,17 @@ int Bitmap::drawText(const uint32_t x, const uint32_t y, const char * text)
       //only for ASCII chars in range 1 ..127 and the suported UTF8 onces. Others will be skipped!
       if (character > 0)
       {
-         const int32_t origin = getPixelIndex(cursor, y);
-         if (origin < 0) break;  //not enough space left to draw further characters into this line
-
-         //draw character
-         status = glyphIterator->init(this->font, character);
-         if (getPixelIndex(cursor + glyphIterator->width, y) < 0) break; //not enough space left to draw further characters into this line
-
-
          //draw pixel for pixel of character
+         const int32_t origin = getPixelIndex(cursor, y);
+         status = glyphIterator->init(this->font, character);
          while (status)
          {
             //calculate pixel index to be set to the respective value
-            pixel = getPixelIndex((uint32_t)origin, glyphIterator->xOffset, glyphIterator->yOffset);
+            pixel = getPixelIndex(origin, glyphIterator->xOffset, glyphIterator->yOffset);
             if (pixel >= 0)
             {
                //set pixel to its value
-               setPixelValue((uint32_t)pixel, glyphIterator->value);
+               setPixelValue(pixel, glyphIterator->value);
             }
             //select next pixel
             status = glyphIterator->next();
@@ -184,6 +178,51 @@ void Bitmap::drawBarcode(const uint32_t y, const uint32_t height, const uint32_t
 }
 
 
+uint32_t Bitmap::drawBarcode(uint32_t x, uint32_t y, uint32_t weight, uint32_t height, uint32_t value)
+{
+   if (height > 0)
+   {
+      uint8_t barcode[9];
+      uint32_t barcodeLength;
+      uint32_t cursor;
+      uint32_t pixel;
+
+      //get encode barcode
+      barcodeLength = BarcodeEan8::intToBarcode(value, barcode);
+      //draw one barcode line
+      cursor = x;
+      for (uint32_t i = 0; i < barcodeLength; ++i)
+      {
+         bool value = ((barcode[i/8] & (0x80 >> (i & 7))) != 0); //get respective bit
+         for (uint32_t j = 0; j < weight; ++j)
+         {
+            pixel = getPixelIndex(cursor++, y);
+            setPixelValue(pixel, value);
+         }
+      }
+
+      //duplicate that line (height - 1)-times
+      duplicateLineDown(y, height - 1);
+      return weight * barcodeLength;
+   }
+   return 0;
+}
+
+
+void Bitmap::drawLine(uint32_t y, uint32_t height)
+{
+   if (height > 0)
+   {
+      //draw horizontal line
+      for (uint32_t i = 0; i < width; ++i)
+      {
+         uint32_t pixel = getPixelIndex(i, y);
+         setPixelValue(pixel, 1);
+      }
+      //duplicate that line (height - 1)-times
+      duplicateLineDown(y, height - 1);
+   }
+}
 
 
 
@@ -192,36 +231,36 @@ void Bitmap::drawBarcode(const uint32_t y, const uint32_t height, const uint32_t
 
 
 
-int32_t Bitmap::getPixelIndex(const uint32_t x, const uint32_t y)
+int32_t Bitmap::getPixelIndex(const int32_t x, const int32_t y)
 {
    if (orientation == Orientation::Horizontally)
    {
-      //check for "label-overflow"
-      if (x >= this->width) return -1;
-      if (y >= this->height) return -1;
+      //check for label under- and overflow
+      if ((uint32_t)x >= this->width) return -1;
+      if ((uint32_t)y >= this->height) return -1;
       //otherwise
       return (y * this->width) + x;
    }
    else //Vertically
    {
-      //check for "label-overflow"
-      if (y >= this->width) return -1;
-      if (x >= this->height) return -1;
+      //check for label under- and overflow
+      if ((uint32_t)y >= this->width) return -1;
+      if ((uint32_t)x >= this->height) return -1;
       //otherwise
       return ((this->width - 1) - y) + (x * this->width);
    }
 }
 
 //get index of pixel relativ to another pixel (moved by x-pixels to the right, y-pixels down)
-int32_t Bitmap::getPixelIndex(const uint32_t pixel, const int32_t xoff, const int32_t yoff)
+int32_t Bitmap::getPixelIndex(const int32_t pixel, const int32_t xoff, const int32_t yoff)
 {
-   int32_t index = (int32_t)pixel;
+   int32_t index = pixel;
    if (orientation == Orientation::Horizontally)
    {
       index += xoff;
       if (index >= 0)
       {
-         if ((index / this->width) == ((int32_t)pixel / this->width)) //stay in the same line (as pixel was)?
+         if ((index / this->width) == (pixel / this->width)) //stay in the same line (as pixel was)?
          {
             index += yoff * this->width;
             if ((index >= 0) && (index < this->length))
@@ -236,7 +275,7 @@ int32_t Bitmap::getPixelIndex(const uint32_t pixel, const int32_t xoff, const in
       if (index >= yoff)
       {
          index -= yoff;
-         if ((index / this->width) == ((int32_t)pixel / this->width)) //stay in the same line (as pixel was)?
+         if ((index / this->width) == (pixel / this->width)) //stay in the same line (as pixel was)?
          {
             index += xoff * this->width;
             if ((index >= 0) && (index < this->length))
@@ -255,14 +294,14 @@ int32_t Bitmap::getPixelIndex(const uint32_t pixel, const int32_t xoff, const in
 
 
 
-bool Bitmap::getPixelValue(const uint32_t pixel)
+bool Bitmap::getPixelValue(const int32_t pixel)
 {
-   const uint32_t index = pixel / 8;
+   const int32_t index = pixel / 8;
    const uint8_t mask = (0x80 >> (pixel & 7));
    uint8_t data = 0;
 
    //ignore all pixel that does not fit onto the lable
-   if (pixel < this->length)
+   if ((uint32_t)pixel < this->length)
    {
       //read respective byte
       data = this->data[index];
@@ -272,14 +311,14 @@ bool Bitmap::getPixelValue(const uint32_t pixel)
 
 
 
-void Bitmap::setPixelValue(const uint32_t pixel, const bool value)
+void Bitmap::setPixelValue(const int32_t pixel, const bool value)
 {
-   const uint32_t index = pixel / 8;
+   const int32_t index = pixel / 8;
    const uint8_t mask = (0x80 >> (pixel & 7));
    uint8_t data;
 
    //ignore all pixel that does not fit onto the lable
-   if (pixel < this->length)
+   if ((uint32_t)pixel < this->length)
    {
       //set pixel value by read-modify-write
       //read respective byte

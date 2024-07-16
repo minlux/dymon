@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=gnu++17")
 include_directories(
    libs/cjson
    libs/cpp-httplib
+   libs/argtable3
    src/barcode
    src/bitmap
    src/bitmap/fonts
@@ -27,28 +28,10 @@ else()
 endif()
 
 
-#commandline tool
-add_executable(dymon_cli
-  libs/cjson/cJSON.c
-  src/bitmap/bitmap.cpp
-  src/bitmap/glyphIterator.cpp
-  src/bitmap/utf8decoder.cpp
-  src/barcode/barcodeEan8.cpp
-  src/dymon/dymon.cpp
-  ${dymon_x}
-  src/main_dymon_cli.cpp
-)
-if(WIN32)
-  target_link_libraries(dymon_cli
-    ws2_32
-    setupapi
-  )
-endif()
-
-
 #print bitmap-files from command line
 add_executable(dymon_pbm
   libs/cjson/cJSON.c
+  libs/argtable3/argtable3.c
   src/bitmap/bitmap.cpp
   src/bitmap/glyphIterator.cpp
   src/bitmap/utf8decoder.cpp
@@ -68,7 +51,9 @@ endif()
 #printserver/webserver
 add_executable(dymon_srv
   libs/cjson/cJSON.c
+  libs/argtable3/argtable3.c
   src/bitmap/bitmap.cpp
+  src/bitmap/bitmap_fromText.cpp
   src/bitmap/glyphIterator.cpp
   src/bitmap/utf8decoder.cpp
   src/barcode/barcodeEan8.cpp
@@ -89,3 +74,13 @@ if(WIN32)
 endif()
 
 
+#text to pbm tool
+add_executable(txt2pbm
+  libs/argtable3/argtable3.c
+  src/bitmap/bitmap.cpp
+  src/bitmap/bitmap_fromText.cpp
+  src/bitmap/glyphIterator.cpp
+  src/bitmap/utf8decoder.cpp
+  src/barcode/barcodeEan8.cpp
+  txt2pbm/main.cpp
+)

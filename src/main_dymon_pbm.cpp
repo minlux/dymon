@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <cstdlib>
 #include <iostream>
@@ -7,9 +10,45 @@
 #include "FreeSans18pt7b.h"
 #include "usbprint.h"
 #include "cJSON.h"
+#include "argtable3.h"
+#include "vt100.h"
 
 
+/* -- Defines ------------------------------------------------------------- */
+#define APP_NAME           "dymon_pbm"
+#define APP_VERSION        "2.0.0"
+
+
+/* -- Types --------------------------------------------------------------- */
 using namespace std;
+
+
+/* -- (Module-)Global Variables ------------------------------------------- */
+
+/* -- Function Prototypes ------------------------------------------------- */
+
+/* -- Implementation ------------------------------------------------------ */
+
+
+
+static void print_usage(void ** argtable)
+{
+   puts(VT100_BOLD_UNDERLINED "Usage:" VT100_RESET " " VT100_BOLD APP_NAME VT100_RESET);
+   arg_print_syntax(stdout, argtable, "\n\n");
+}
+
+static void print_help(void ** argtable)
+{
+   //Description
+   puts("Print P4 portable bitmap on DYMO LabelWriter.\n");
+   //Usage
+   print_usage(argtable);
+   //Options
+   puts(VT100_BOLD_UNDERLINED "Options:" VT100_RESET);
+   arg_print_glossary(stdout, argtable,"  %-25s %s\n");
+}
+
+
 
 static inline bool file_exist(const char * name)
 {
@@ -18,54 +57,107 @@ static inline bool file_exist(const char * name)
 }
 
 
-static void usage(void)
-{
-   cout << "Usage:\n";
-   cout << " dymon_pbm <net>|<usb>|<usb450> <bitmap-file>\n\n";
-
-   cout << "Examples:\n";
-   cout << " dymon_pbm net:192.168.178.23 <bitmap-file>\n";
-   cout << " dymon_pbm usb:/dev/usb/lp0 <bitmap-file>\n";
-   cout << " dymon_pbm usb450:/dev/usb/lp1 <bitmap-file>\n";
-   cout << " dymon_pbm usb:vid_0922 <bitmap-file>\n";
-   cout << endl;
-}
-
-
 int main(int argc, char * argv[])
 {
+   struct arg_lit * argHelp;
+   struct arg_lit * argVersion;
+   struct arg_str * argUsb;
+   struct arg_str * argNet;
+   struct arg_int * argModel;
+   struct arg_int * argCopies;
+   struct arg_file * argInput;
+   struct arg_end * argEnd;
+   void * argtable[] =
+   {
+      argHelp = arg_lit0(NULL, "help", "Print help and exit"),
+      argVersion = arg_lit0(NULL, "version", "Print version and exit"),
+   #ifdef _WIN32
+      argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922')"),
+   #else
+      argUsb = arg_str0(NULL, "usb", "<DEVICE>", "Use USB printer device (e.g. '/dev/usb/lp1')"),
+   #endif
+      argNet = arg_str0(NULL, "net", "<IP>", "Use network printer with IP (e.g. '192.168.178.23')"),
+      argModel = arg_int0(NULL, "model", "<NUMBER>", "Model number of DYMO LabelWriter (e.g. '450')"),
+      argCopies = arg_int0(NULL, "copies", "<NUMBER>", "Number of copies to be printed [default: 1]"),
+      argInput = arg_file1(NULL, NULL, "<INPUT>", "PBM file to be printed"),
+      argEnd = arg_end(3),
+   };
+
+   // Parse command line arguments.
+   arg_parse(argc, argv, argtable);
+
+   // Help
+   if (argHelp->count)
+   {
+      print_help(argtable);
+      return 0;
+   }
+
+   // Version
+   if (argVersion->count)
+   {
+      puts(APP_VERSION);
+      return 0;
+   }
+
+   // Check existance of one (and only one) of the supported interfaces
+   if (argUsb->count && argNet->count)
+   {
+      puts(VT100_RED "Error:" VT100_RESET " Only one interface allowed (one of '--usb' or '--net')\n");
+      print_usage(argtable);
+      return -1;
+   }
+   if ((argUsb->count ^ argNet->count) == 0)
+   {
+      puts(VT100_RED "Error:" VT100_RESET " Interface specifier required (one of '--usb' or '--net')\n");
+      print_usage(argtable);
+      return -1;
+   }
+
+   // Check for input file / pbm
+   if (!argInput->count)
+   {
+      puts(VT100_RED "Error:" VT100_RESET " Input file required\n");
+      print_usage(argtable);
+      return -1;
+   }
+
+   //check if inpuzt file exists
+   const char * const bitmapFile = argInput->filename[0];
+   if (!file_exist(bitmapFile))
+   {
+      cout << VT100_RED "Error:" VT100_RESET " File '" << bitmapFile << "' does not exist" << endl;
+      return -4;
+   }
+
+
    enum {
       NET = 0,
       USB
    } interfaze;
-   char * path;
-   const char * bitmapFile;
+   const char * path;
    bool lw450 = false;
 
-
-   if (argc < 3)
-   {
-      usage();
-      return -1;
-   }
-
    //get interface and path
-   if (strncmp(argv[1], "net:", 4) == 0)
+   if (argNet->count)
    {
       interfaze = NET;
+      const char * const ip = argNet->sval[0];
       cJSON * json = cJSON_CreateObject();
-      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(&argv[1][4])); //wrap the ip address into a json object
+      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(ip)); //wrap the ip address into a json object
       path = (char *)json; //pass this to DymonNet::start, which expects a json object
    }
-   else if ((strncmp(argv[1], "usb:", 4) == 0) || (strncmp(argv[1], "usb450:", 7) == 0))
+   else //if (argUsb->count)
    {
       interfaze = USB;
-      lw450 == (strncmp(argv[1], "usb450:", 7) == 0);
+      const char * const dev = argUsb->sval[0];
+      const int model = (argModel->count ? argModel->ival[0] : 0);
+      lw450 = (model == 450);
    #ifdef _WIN32
       //get the device name, to be used on windows
       //
       static char devname[256];
-      int err = usbprint_get_devicename(devname, sizeof(devname), &argv[1][4]); //input something like "vid_0922" and get device name like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}"
+      int err = usbprint_get_devicename(devname, sizeof(devname), dev); //input something like "vid_0922" and get device name like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}"
       if (err != 0)
       {
          cout << "Can't find any USB connected DYMO" << endl;
@@ -73,23 +165,12 @@ int main(int argc, char * argv[])
       }
       path = devname;
    #else
-      path = &argv[1][4]; //get substring -> device-path expected (something like "/dev/usb/lp0")
+      path = dev;
    #endif
    }
-   else
-   {
-      usage();
-      return -3;
-   }
 
-   //check if file exists
-   bitmapFile = argv[2];
-   if (!file_exist(bitmapFile))
-   {
-      cout << "File " << bitmapFile << " does not exist!" << endl;
-      return -4;
-   }
 
+   // Create instance
    Dymon * dymon;
    if (interfaze == NET)
    {
@@ -100,15 +181,19 @@ int main(int argc, char * argv[])
       dymon = new DymonUsb(1, lw450);
    }
 
-
-
-   //print label
-   int error = dymon->start(path); //connect to labelwriter
+   // Print label
+   int error = dymon->start((void *)path); //connect to labelwriter
    if (error == 0)
    {
-      dymon->print_bitmap(bitmapFile);
+      const int copies = (argCopies->count ? argCopies->ival[0] : 1);
+      for (int i = 0; i < copies; ++i) 
+      {
+         dymon->print_bitmap(bitmapFile, ((i+1) < copies));
+      }
       dymon->end(); //finalize printing (form-feed) and close socket
    }
+
+   // Clean up
    delete dymon;
    return error;
 }

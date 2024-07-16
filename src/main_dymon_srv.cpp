@@ -22,15 +22,17 @@
 #include "msg_queue.h"
 #include "print_json.h"
 #include "usbprint.h"
+#include "argtable3.h"
+#include "vt100.h"
 
 
 /* -- Defines ------------------------------------------------------------- */
-using namespace std;
-using namespace httplib;
-
-#define VERSION   "V2.00r0"
+#define APP_NAME           "dymon_srv"
+#define APP_VERSION        "2.1.0"
 
 /* -- Types --------------------------------------------------------------- */
+using namespace std;
+using namespace httplib;
 
 
 /* -- Module Global Function Prototypes ----------------------------------- */
@@ -48,6 +50,24 @@ static PrintJson * printJson;
 
 
 /* -- Implementation ------------------------------------------------------ */
+
+
+static void print_usage(void ** argtable)
+{
+   puts(VT100_BOLD_UNDERLINED "Usage:" VT100_RESET " " VT100_BOLD APP_NAME VT100_RESET);
+   arg_print_syntax(stdout, argtable, "\n\n");
+}
+
+static void print_help(void ** argtable)
+{
+   //Description
+   puts("Printserver for DYMO LabelWriter.\n");
+   //Usage
+   print_usage(argtable);
+   //Options
+   puts(VT100_BOLD_UNDERLINED "Options:" VT100_RESET);
+   arg_print_glossary(stdout, argtable,"  %-25s %s\n");
+}
 
 
 static void usage(void)
@@ -68,29 +88,64 @@ static void usage(void)
 
 int main(int argc, char * argv[])
 {
+   struct arg_lit * argHelp;
+   struct arg_lit * argVersion;
+   struct arg_str * argUsb;
+   struct arg_str * argNet;
+   struct arg_int * argModel;
+   struct arg_int * argPort;
+   struct arg_end * argEnd;
+   void * argtable[] =
+   {
+      argHelp = arg_lit0(NULL, "help", "Print help and exit"),
+      argVersion = arg_lit0(NULL, "version", "Print version and exit"),
+   #ifdef _WIN32
+      argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922')"),
+   #else
+      argUsb = arg_str0(NULL, "usb", "<DEVICE>", "Use USB printer device (e.g. '/dev/usb/lp1')"),
+   #endif
+      argNet = arg_str0(NULL, "net", "<IP>", "Force use of network printer with IP (e.g. '192.168.178.23')"),
+      argModel = arg_int0(NULL, "model", "<NUMBER>", "Model number of DYMO LabelWriter (e.g. '450')"),
+      argPort = arg_int0("p", "port", "<NUMBER>", "TCP port number of server [default: 8092]"),
+      argEnd = arg_end(3),
+   };
+
+   // Parse command line arguments.
+   arg_parse(argc, argv, argtable);
+
+   // Help
+   if (argHelp->count)
+   {
+      print_help(argtable);
+      return 0;
+   }
+
+   // Version
+   if (argVersion->count)
+   {
+      puts(APP_VERSION);
+      return 0;
+   }
+
+   // Ensure that there is at most one interface specified
+   if (argUsb->count && argNet->count)
+   {
+      puts(VT100_RED "Error:" VT100_RESET " Only one interface allowed (one of '--usb' or '--net')\n");
+      print_usage(argtable);
+      return -1;
+   }
+
+
    thread printThread(&m_print_thread);
    Server svr;
 
 
-   //evaluate command line arguments
-   //-p <tcp-port>
-   uint16_t port = 8092;
-   for (int i = 1; i < (argc - 1); ++i)
-   {
-      if ((argv[i][0] == '-') && (argv[i][1] == 'p'))
-      {
-         uint16_t p = (uint16_t)atoi(argv[i + 1]);
-         if (p != 0)
-         {
-            port = p;
-         }
-         break;
-      }
-   }
    //get interfaze and path
-   if ((argc >= 2) && ((strncmp(argv[1], "usb:", 4) == 0) || (strncmp(argv[1], "usb450:", 7) == 0)))
+   if (argUsb->count)
    {
-      const bool lw450 = (strncmp(argv[1], "usb450:", 7) == 0);
+      const char * const dev = argUsb->sval[0];
+      const int model = (argModel->count ? argModel->ival[0] : 0);
+      const bool lw450 = (model == 450);
       const char * path;
    #ifdef _WIN32
       //get the device name, to be used on windows
@@ -104,20 +159,22 @@ int main(int argc, char * argv[])
       }
       path = devname;
    #else
-      path = &argv[1][4]; //get substring -> device-path expected (something like "/dev/usb/lp0")
+      path = dev;
    #endif
       printJson = new PrintJson(new DymonUsb(1, lw450), path);
    }
    else //net
    {
-      printJson = new PrintJson(new DymonNet, nullptr);
+      const char * const ip = argNet->sval[0];
+      cJSON * json = cJSON_CreateObject();
+      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(ip)); //wrap the ip address into a json object
+      printJson = new PrintJson(new DymonNet, (char *)json); //pass this to DymonNet::start, which expects a json object
    }
 
 
-
-
    //greetings
-   cout << "Printserver for DYMO LabelWriter Wireless, by minlux. " VERSION "\n" << endl;
+   const uint16_t port = (uint16_t)(argPort->count ? argPort->ival[0] : 8092);
+   cout << "Printserver for DYMO LabelWriter Wireless, by minlux. V" APP_VERSION "\n" << endl;
    cout << "\nStart listening to port " << port << endl;
    cout << "Press [Ctrl + C] to quit!" << endl;
 
@@ -158,25 +215,19 @@ static void m_on_options_labels(const Request &req, Response &res)
    [
       {
          "ip":"127.0.0.1", //don't care for USB printers
-         "format":1,
-         "title":"todo"
-         "body":[
-            "first line text",
-            "second line",
-            "3rd",
-            "4th line of text"
-         ],
-         "barcode":1234567
+         "width":272,
+         "height":252,
+         "orientation":0,
+         "text":"\\24cTitle\n\\3_\nHello\n\\rWorld\n\n\\100#214",
+         "count":1
       },
       ...
    ]
 
    Example, sending data with CURL:
    ----
-   curl -d '[{"ip":"192.168.178.49", "format":1,
-     "title":"Manuel Heiß",
-     "body":["www.minlux.de", "https://github.com/minlux", "https://www.youtube.com/channel/UC_P8QKvglG382JnKue-dSkw"],
-     "barcode":1234567 }]'
+   curl -d '{"ip":"192.168.178.49", "width":272, "height":252, "orientation":0,
+     "text":"Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux", "count":1 }'
      -H "Content-Type: application/json"
      -X POST http://localhost:8092/labelprinter/labels
 */
@@ -218,34 +269,18 @@ static void m_print_thread()
 }
 
 
-static void m_print_labels(cJSON * labels)
+static void m_print_labels(cJSON * label)
 {
-   cJSON * label;
-   int err = -1;
-
    //start label printing
-   //use the IP given in the first label to connect to the LabelWriter
-   cJSON_ArrayForEach(label, labels)
-   {
-      err = printJson->start(label);
-      break;
-   }
-
-   //start printing the labels (all labels will be printed by the LabelWriter given by the IP of the first label)
+   //if set, use the IP given in the label to connect to the LabelWriter, otherwise the one given with '--net' will be used
+   cJSON * ip = cJSON_GetObjectItemCaseSensitive((cJSON *)label, "ip"); //get IP
+   const char * value = cJSON_GetStringValue(ip);
+   int err = printJson->start((value && (strlen(value) > 0)) ? ip : nullptr);
    if (err == 0)
    {
-      cJSON_ArrayForEach(label, labels)
-      {
-         //print requested label
-         err = printJson->print(label);
-         if (err != 0) break;
-         if (label->next != nullptr)
-         {
-            this_thread::sleep_for(chrono::microseconds(500)); //delay between the single labels
-         }
-      }
+      //print requested labels
+      printJson->print(label);
    }
-
    //finalize printing process (make form-feed and close TCP connection to LabelWriter)
    printJson->end();
 }

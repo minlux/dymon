@@ -30,10 +30,25 @@ public:
    void setFont(const GFXfont * const font);
    void setOrientation(enum Orientation orientation);
 
-   uint32_t getTextWidth(const char * text); //font must be set first!!!
-   int drawText(const uint32_t x, const uint32_t y, const char * text); //font must be set first!!!
+   uint32_t getTextWidth(const char * text) const; //font must be set first!!!
+   int drawText(const int32_t x, const int32_t y, const char * text); //font must be set first!!!
    void drawBarcode(const uint32_t y, const uint32_t height, const uint32_t value,
                     double scale = 1.0); //will be printed centered (set scale < 1 for smaller barcode width)
+   static inline uint32_t getBarcodeWidth(uint32_t weight) { return 67u * weight; }
+   uint32_t drawBarcode(uint32_t x, uint32_t y, uint32_t weight, uint32_t height, uint32_t value);
+   inline uint32_t getGlyphHeight() const { return font->glyph[3].height; } //3 -> use height of '#'
+   inline uint32_t getLineHeight() const { return font->yAdvance; }
+
+   void drawLine(uint32_t y, uint32_t height);
+
+   inline uint32_t getWidth() const  { return (orientation == Orientation::Horizontally) ? width : height; }
+   inline uint32_t getHeight() const { return (orientation == Orientation::Horizontally) ? height : width; }
+
+
+//factory function
+   static Bitmap fromText(const uint32_t width, const uint32_t height, enum Orientation orientation,
+                           const char * const text);
+
 
 /*readonly*/
    uint32_t width;
@@ -43,10 +58,10 @@ public:
    uint32_t lengthByte; //length in bytes
 
 private:
-   int32_t getPixelIndex(const uint32_t x, const uint32_t y); //return -1 in case of overflow
-   int32_t getPixelIndex(const uint32_t pixel, const int32_t xoff, const int32_t yoff); //return -1 in case of overflow
-   bool getPixelValue(const uint32_t pixel);
-   void setPixelValue(const uint32_t pixel, const bool value);
+   int32_t getPixelIndex(const int32_t x, const int32_t y); //return -1 in case of overflow
+   int32_t getPixelIndex(const int32_t pixel, const int32_t xoff, const int32_t yoff); //return -1 in case of overflow
+   bool getPixelValue(const int32_t pixel);
+   void setPixelValue(const int32_t pixel, const bool value);
    void duplicateLineDown(const uint32_t y, const uint32_t times = 1); //duplicate the line of y-coordinate n-times downdards
 
    enum Orientation orientation;

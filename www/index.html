@@ -9,6 +9,11 @@
   margin-bottom: 1em;
 }
 
+.hint {
+  margin-top: 2em;
+  /* margin-bottom: 1em; */
+}
+
 .pf fieldset {
   margin: 0;
   padding: 0.35em 0 0.75em;
@@ -80,31 +85,28 @@
 
 <body>
 <h2>Printserver for DYMO LabelWriter</h2>
-<div class="st"><i>by minlux, V2.00r0</i></div>
+<div class="st"><i>by minlux, V2.1.0</i></div>
 <div class="pf pfa">
   <fieldset>
     <div class="pcg">
       <label for="ip">Printer</label>
-      <input id="ip" type="text" placeholder="IP-Address of LabelWriter (z.B. 192.168.1.101)" pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
+      <input id="ip" type="text" placeholder="IP-Address of LabelWriter (optional)" pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
     </div>
     <div class="pcg">
       <label for="format">Format</label>
       <select id="format" name="business">
-        <option value="0" selected>25mm x 25mm</option>
-        <option value="1">36mm x 89mm</option>
+        <!-- value defines the label size in pixels (@300dpi), Suffix 'R' means rotated by 90°-->
+        <option value="272x252" selected>25mm x 25mm</option>
+        <option value="400x960R">36mm x 89mm (Landscape)</option>
       </select>
     </div>
     <div class="pcg">
-      <label for="title">Title</label>
-      <input id="title" type="text" autocomplete="off">
-    </div>
-    <div class="pcg">
       <label for="text">Text</label>
-      <textarea id="text" rows="4"></textarea>
-    </div>
-    <div class="pcg">
-      <label for="barcode">Barcode (EAN-8)</label>
-      <input id="barcode" type="number" placeholder="max. 7 Ziffern" autocomplete="off" min="0" max="9999999" step="1">
+      <textarea id="text" rows="6">\24cTitle
+\3_
+Hello
+\rWorld
+\100#214</textarea>
     </div>
     <div class="pcg">
       <label for="count">Count</label>
@@ -115,38 +117,39 @@
     </div>
   </fieldset>
 </div>
-
+<div class="hint">
+  You can use a minimal markup language to format each line of text.<br>
+  Format specifier starts at the beginning of every line with a backslash (\),<br>
+  followed by one or more of the following options:
+  <ul>
+    <li><i>NUMBER</i>: specify font size (15, 18, 21, 24), line width (pixels) or barcode weight</li>
+    <li>l/c/r: specify horizontal text alighment (left, centered, right)</li>
+    <li>_: to draw a horizontal line</li>
+    <li>#: to draw a qrcode with the following value</li>
+  </ul>
+</div>
 <script>
   function print() {
+    let format = document.getElementById('format').value; //selectedIndex
+    let width_height = format.split('x');
+    let width = parseInt(width_height[0]);
+    let height = parseInt(width_height[1]);
+    let orientation = (format.slice(-1) === 'R') ? 1 : 0;
     //setup label
     let label = {
       'ip': document.getElementById('ip').value,
-      'format': document.getElementById('format').selectedIndex,
+      'width': width,
+      'height': height,
+      'orientation': orientation,
+      'text': document.getElementById('text').value,
+      'count': parseInt(document.getElementById('count').value) || 1,
     };
-    let title = document.getElementById('title').value;
-    if (title) {
-      label.title = title;
-    }
-    let text = document.getElementById('text').value;
-    if (text) {
-      label.body = text.split('\n');
-    }
-    let barcode = document.getElementById('barcode').value;
-    if (barcode) {
-      label.barcode = +barcode;
-    }
-
-    //setup labels
-    let labels = [];
-    let count = parseInt(document.getElementById('count').value) || 1;
-    for (let i = 0; i < count; i++) {
-      labels.push(label);
-    }
+    // console.log(label);
 
     //call REST API
     let ajax = new XMLHttpRequest();
     ajax.open('POST', '/labelprinter/labels');
-    ajax.send(JSON.stringify(labels));
+    ajax.send(JSON.stringify(label));
   }
 </script>
 </body>

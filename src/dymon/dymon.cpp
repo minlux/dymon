@@ -156,7 +156,7 @@ int Dymon::read_status(uint8_t mode) //request a status update
 
 
 //bitmap resolution is assumed to be 300dpi
-int Dymon::print(const Bitmap * bitmap, double labelLength1mm, int more)
+int Dymon::print(const Bitmap * bitmap, double _labelLength1mm, int more)
 {
    uint8_t buffer[4096];
    int status;
@@ -275,7 +275,7 @@ int Dymon::print(const Bitmap * bitmap, double labelLength1mm, int more)
 
 
 
-int Dymon::print_bitmap(const char * file)
+int Dymon::print_bitmap(const char * file, int more)
 {
    uint8_t buffer[4096];
    uint32_t height;
@@ -324,7 +324,6 @@ int Dymon::print_bitmap(const char * file)
       //index
       buffer[LABEL_INDEX_OFFSET] = (uint8_t)this->index;
       buffer[LABEL_INDEX_OFFSET + 1] = (uint8_t)(this->index >> 8);
-      this->index++;
       //set bitmap height
       buffer[LABEL_HEIGHT_OFFSET] = (uint8_t)height;
       buffer[LABEL_HEIGHT_OFFSET + 1] = (uint8_t)(height >> 8);
@@ -361,19 +360,50 @@ int Dymon::print_bitmap(const char * file)
    }
    fclose(f);
 
-   //send the form feed + status request
-   status = this->send(_labelFeedStatus, sizeof(_labelFeedStatus));
+   //send short form feed for *this print*
+   buffer[0] = 0x1B;
+   buffer[1] = 0x47; //G
+   status = this->send(buffer, 2);
    if (status <= 0) return -28;
 
-   //wait for status response
-   status = this->receive(this->status, sizeof(this->status));
-   if (status <= 0) return -29;
-#if 1
-   if (dymonDebug)
+   //receive status response for the *previous print*
+   this->index++;
+   if (this->index > 2)
    {
-      log_status(0, this->status, status);
+      //wait for status response
+      status = this->receive(this->status, sizeof(this->status));
+      if (status <= 0) return -29;
+   #if 1
+      if (dymonDebug)
+      {
+         log_status(0, this->status, status);
+      }
+   #endif
    }
-#endif
+
+   //send get status command for *this print*
+   buffer[0] = 0x1B;
+   buffer[1] = 0x41; //A
+   buffer[2] = (more ? 2 : 0); //if more labels will follow, keep the lock. otherwise release the lock
+   status = this->send(buffer, 3);
+   if (status <= 0) return -28;
+
+
+   //if more labels will follow, then i don't wait for the status response here
+   //because - to speed up printing - i directly start the printing the next label...
+   //However, if it is the last label, then we wait for the final status response
+   if (more == false)
+   {
+      //wait for status response
+      status = this->receive(this->status, sizeof(this->status));
+      if (status <= 0) return -29;
+   #if 1
+      if (dymonDebug)
+      {
+         log_status(0, this->status, status);
+      }
+   #endif
+   }
 
    //success
    return 0;

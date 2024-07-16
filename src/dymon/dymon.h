@@ -24,7 +24,7 @@ public:
    int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a cJSON object, with a string attribute "ip"; For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
-   int print_bitmap(const char * file); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
+   int print_bitmap(const char * file, int more); //print bitmap from file to label (bitmap file must be in raw-pmb format (P4))
    void end(); //finalize printing (form-feed) and close socket
    // void _debugEnd(); //close without form feed
 

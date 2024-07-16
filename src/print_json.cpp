@@ -148,16 +148,44 @@ static int _getBitmap(cJSON * json, Bitmap& bitmap)
 */
 int PrintJson::print(cJSON * json)
 {
-   Bitmap bitmap;
-   int status = _getBitmap(json, bitmap);
-   if (status >= 0)
+   cJSON * j;
+
+   //get label width
+   j = cJSON_GetObjectItemCaseSensitive(json, "width");
+   if (j == nullptr) return -1;
+   const int width = j->valueint;
+
+   //get label height
+   j = cJSON_GetObjectItemCaseSensitive(json, "height");
+   if (j == nullptr) return -1;
+   const int height = j->valueint;
+
+   //get label orientation
+   j = cJSON_GetObjectItemCaseSensitive(json, "orientation");
+   if (j == nullptr) return -1;
+   const int orientation = j->valueint;
+
+
+   //get text to be printed
+   j = cJSON_GetObjectItemCaseSensitive(json, "text");
+   const char * const text = cJSON_GetStringValue(j);
+   if (text == nullptr) return -1;
+
+   //create bitmap
+   Bitmap bitmap = Bitmap::fromText(width, height, (Bitmap::Orientation)orientation, text);
+
+   //print labels
+   //get number of copies to be printed
+   j = cJSON_GetObjectItemCaseSensitive(json, "count");
+   if (j == nullptr) return -1;
+   const int copies = j->valueint;
+   for (int i = 0; i < copies; ++i) 
    {
-      //print label
-      const LabelFormat_t * lf = &m_LableFormat[status];
-      int error = dymon->print(&bitmap, lf->labelLength, (json->next != NULL));
-      return error;
+      int err = dymon->print(&bitmap, 0, ((i+1) < copies));
+      if (err != 0 ) return err;
    }
-   return -status;
+
+   return 0;
 }
 
 
@@ -179,21 +207,42 @@ int PrintJson::print(cJSON * json)
 */
 int PrintJson::write_to_pbm(cJSON * json, const char * filename)
 {
-   Bitmap bitmap;
-   int error = _getBitmap(json, bitmap);
-   if (error >= 0)
+   cJSON * j;
+
+   //get label width
+   j = cJSON_GetObjectItemCaseSensitive(json, "width");
+   if (j == nullptr) return -1;
+   const int width = j->valueint;
+
+   //get label height
+   j = cJSON_GetObjectItemCaseSensitive(json, "height");
+   if (j == nullptr) return -1;
+   const int height = j->valueint;
+
+   //get label orientation
+   j = cJSON_GetObjectItemCaseSensitive(json, "orientation");
+   if (j == nullptr) return -1;
+   const int orientation = j->valueint;
+
+
+   //get text to be printed
+   j = cJSON_GetObjectItemCaseSensitive(json, "text");
+   const char * const text = cJSON_GetStringValue(j);
+   if (text == nullptr) return -1;
+
+   //create bitmap
+   Bitmap bitmap = Bitmap::fromText(width, height, (Bitmap::Orientation)orientation, text);
+
+   //write as PBM to file
+   FILE * f = fopen(filename, "w");
+   if (f != nullptr)
    {
-      error = -1; //preset
-      FILE * f = fopen(filename, "w");
-      if (f != nullptr)
-      {
-         char header[32];
-         int len = sprintf(header, "P4\n%u %u\n", bitmap.width, bitmap.height); //generate header
-         fwrite(header, 1, len, f); //write header
-         fwrite(bitmap.data, 1, bitmap.lengthByte, f); //write payload
-         fclose(f); //we are done
-         error = 0;
-      }
+      char header[32];
+      int len = sprintf(header, "P4\n%u %u\n", bitmap.width, bitmap.height); //generate header
+      fwrite(header, 1, len, f); //write header
+      fwrite(bitmap.data, 1, bitmap.lengthByte, f); //write payload
+      fclose(f); //we are done
+      return 0;
    }
-   return error;
+   return -1;
 }
