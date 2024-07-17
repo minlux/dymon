@@ -223,6 +223,27 @@ followed by one or more of the following options:
 - `_`: to draw a horizontal line
 - `#`: to draw a qrcode with the following value
 
+Examples:
+
+Read from file:
+
+```
+txt2pbm -w 272 -h 252 -o test.pbm test.txt
+```
+
+Pipe text:
+
+```
+echo -e "Hello World\nLorem ipsum" | txt2pbm -w 272 -h 252 -o test.pbm
+```
+
+
+Read from *stdin* (press CTRL + D to finish):
+
+```
+txt2pbm -w 392 -h 960 -r -o test.pbm
+```
+
 
 ## See also
 - [Commands and Status](doc/cmd_status.md)
