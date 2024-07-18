@@ -10,6 +10,7 @@ This project implements 3 applications:
 
 
 ## Intro
+
 2018 I bought DYMO's new wireless label printer (*LabelWriter Wireless*). I had the idea to print labels out of an (web)application
 containing data like numbers and barcodes dynamically retrieved from a database.
 
@@ -28,6 +29,7 @@ To make it short: Based on the information provided in the resouces noted above 
 
 
 ## Findings
+
 For communiction with the *LabelWriter Wireless* TCP port 9100 is used. This makes sense, because port 9100 is reserved for PDL (page description language)
 data streams, used for printing to certain network printers. Communicatin is **NOT** encrypted.
 
@@ -49,6 +51,7 @@ The bits of the bitmap blob are mapped to label pixels row by row, column by col
 
 
 ## Protocol
+
 Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 1. Open TCP connection
@@ -88,15 +91,16 @@ Example for printing a 272x252 bitmap to a 25mm X 25mm label with 300x300dpi.
 
 
 ## Implementation
+
 Most of the application code relates to the creation of the bitmap (text and barcode). The actual code to interface with the *LabelWriter* can be found in the files in folder `dymon` and in `src/print.cpp`.
 
-## Notes
 - *Dymon* is an abstact class. There is a specialization for Windows and one for Linux. Those child classes only handles the TCP network access.
 - To change the oriantation of the label, the bitmap must be rotated. The bitmap class in this project demostrates this.
 - To get an idea how to change the label size/format have a look into `src/print.cpp`. There is an implementation for two different label formats with different orientation.
 
 
-## How to build
+### How to build
+
 Build process is based on CMake.
 
 1. Create a build directory (e.g. `mkdir build`)
@@ -105,7 +109,6 @@ Build process is based on CMake.
 
 
 ## Usage
-
 
 ### dymon_pbm
 
@@ -266,6 +269,7 @@ convert -resize 272x252 -extent 272x252 -gravity center logo.svg logo.pbm
 
 
 ## See also
+
 - [Commands and Status](doc/cmd_status.md)
 - [Labels](doc/paper_size.md)
 - [DYMO Developer SDK Support Blog](https://developers.dymo.com/#/article/1417)
