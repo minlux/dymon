@@ -222,11 +222,15 @@ echo -e "Hello World\nLorem ipsum" | txt2pbm -w 272 -h 252 -o test.pbm
 ```
 
 
-Read from *stdin* (press CTRL + D to finish):
+Read from *stdin*:
 
 ```
 txt2pbm -w 392 -h 960 -r -o test.pbm
 ```
+
+Note: To finish reading from stdin:
+- "CTRL+D" (on Linux) 
+- "CTRL+Z" followed by "Enter" (on Windows)
 
 
 ### GIMP
