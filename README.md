@@ -209,7 +209,7 @@ followed by one or more of the following options:
 - *NUMBER*: specify font size (15, 18, 21, 24), line width (pixels) or barcode weight
 - `l`/`c`/`r`: specify horizontal text alignment (left, centered, right)
 - `_`: to draw a horizontal line
-- `#`: to draw a qrcode with the following value
+- `#`: to draw a EAN-9 barcode with the following value
 
 **Examples:**
 
