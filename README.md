@@ -126,7 +126,8 @@ Options:
   <INPUT>                   PBM file to be printed
 ```
 
-Note: At least for LabelWriter 450, it is mandotory to set `--model`!
+Note: At least for LabelWriter 450, it is mandotory to set `--model`<br>
+Note: On Windows you have to specify the `--usb` *DEVICE* by means of vendor-/product-id. E.g. `vid_0922` or more specific `vid_0922&pid_0028`.
 
 
 **Examples:**
@@ -135,8 +136,8 @@ In folder `doc` you can find some example files that can be printed (on the resp
 
 ```
 ./dymon_pbm --net 192.168.178.23 ../doc/manu_25x25.pbm
-./dymon_pbm --usb /dev/usb/lp0   ../doc/eagle_25x25.pbm     //linux
-./dymon_pbm --usb vid_0922       ../doc/eagle_36x89.pbm     //windows
+./dymon_pbm --usb /dev/usb/lp0   ../doc/eagle_25x25.pbm     //Linux
+./dymon_pbm --usb vid_0922       ../doc/eagle_36x89.pbm     //Windows
 ```
 
 
@@ -158,13 +159,16 @@ Options:
   --debug                   Enable debug output
 ```
 
+Note: At least for LabelWriter 450, it is mandotory to set `--model`<br>
+Note: On Windows you have to specify the `--usb` *DEVICE* by means of vendor-/product-id. E.g. `vid_0922` or more specific `vid_0922&pid_0028`.
+
 **Examples:**
 
 ```
 ./dymon_srv
 ./dymon_srv --net 192.168.178.23
-./dymon_srv --usb /dev/usb/lp0   //linux
-./dymon_srv --usb vid_0922       //windows
+./dymon_srv --usb /dev/usb/lp0   //Linux
+./dymon_srv --usb vid_0922       //Windows
 ```
 
 Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).
