@@ -66,6 +66,7 @@ int main(int argc, char * argv[])
    struct arg_int * argModel;
    struct arg_int * argCopies;
    struct arg_file * argInput;
+   struct arg_lit * argDebug;
    struct arg_end * argEnd;
    void * argtable[] =
    {
@@ -79,6 +80,7 @@ int main(int argc, char * argv[])
       argNet = arg_str0(NULL, "net", "<IP>", "Use network printer with IP (e.g. '192.168.178.23')"),
       argModel = arg_int0(NULL, "model", "<NUMBER>", "Model number of DYMO LabelWriter (e.g. '450')"),
       argCopies = arg_int0(NULL, "copies", "<NUMBER>", "Number of copies to be printed [default: 1]"),
+      argDebug = arg_lit0(NULL, "debug", "Enable debug output"),
       argInput = arg_file1(NULL, NULL, "<INPUT>", "PBM file to be printed"),
       argEnd = arg_end(3),
    };
@@ -120,6 +122,12 @@ int main(int argc, char * argv[])
       puts(VT100_RED "Error:" VT100_RESET " Input file required\n");
       print_usage(argtable);
       return -1;
+   }
+
+   // Check for debug switch
+   if (!argDebug->count)
+   {
+      dymonDebug = 1;
    }
 
    //check if inpuzt file exists

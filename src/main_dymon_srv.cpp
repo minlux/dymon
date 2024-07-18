@@ -70,22 +70,6 @@ static void print_help(void ** argtable)
 }
 
 
-static void usage(void)
-{
-   cout << "Usage:\n";
-   cout << " dymon_srv [<usb>|<usb450>] [-p <port>]\n\n";
-
-   cout << "Examples:\n";
-   cout << " dymon_srv\n";
-   cout << " dymon_srv -p 9000\n";
-   cout << " dymon_srv usb:/dev/usb/lp0\n";
-   cout << " dymon_srv usb450:/dev/usb/lp1\n";
-   cout << " dymon_srv usb:vid_0922 -p 8093\n";
-   cout << endl;
-}
-
-
-
 int main(int argc, char * argv[])
 {
    struct arg_lit * argHelp;
@@ -94,6 +78,7 @@ int main(int argc, char * argv[])
    struct arg_str * argNet;
    struct arg_int * argModel;
    struct arg_int * argPort;
+   struct arg_lit * argDebug;
    struct arg_end * argEnd;
    void * argtable[] =
    {
@@ -107,6 +92,7 @@ int main(int argc, char * argv[])
       argNet = arg_str0(NULL, "net", "<IP>", "Force use of network printer with IP (e.g. '192.168.178.23')"),
       argModel = arg_int0(NULL, "model", "<NUMBER>", "Model number of DYMO LabelWriter (e.g. '450')"),
       argPort = arg_int0("p", "port", "<NUMBER>", "TCP port number of server [default: 8092]"),
+      argDebug = arg_lit0(NULL, "debug", "Enable debug output"),
       argEnd = arg_end(3),
    };
 
@@ -125,6 +111,12 @@ int main(int argc, char * argv[])
    {
       puts(APP_VERSION);
       return 0;
+   }
+
+   // Check for debug switch
+   if (!argDebug->count)
+   {
+      dymonDebug = 1;
    }
 
    // Ensure that there is at most one interface specified
@@ -269,10 +261,8 @@ static void m_print_thread()
 static void m_print_labels(cJSON * label)
 {
    //start label printing
-   //if set, use the IP given in the label to connect to the LabelWriter, otherwise the one given with '--net' will be used
    cJSON * ip = cJSON_GetObjectItemCaseSensitive((cJSON *)label, "ip"); //get IP
-   const char * value = cJSON_GetStringValue(ip);
-   int err = printJson->start((value && (strlen(value) > 0)) ? ip : nullptr);
+   int err = printJson->start(ip); //IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
    if (err == 0)
    {
       //print requested labels
