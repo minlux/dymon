@@ -63,6 +63,7 @@ private:
    bool getPixelValue(const int32_t pixel);
    void setPixelValue(const int32_t pixel, const bool value);
    void duplicateLineDown(const uint32_t y, const uint32_t times = 1); //duplicate the line of y-coordinate n-times downdards
+   void duplicateLineSegmentDown(const uint32_t y, const uint32_t times, uint32_t x, uint32_t len);
 
    enum Orientation orientation;
    uint32_t widthByte;

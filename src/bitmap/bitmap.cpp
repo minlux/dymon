@@ -202,7 +202,7 @@ uint32_t Bitmap::drawBarcode(uint32_t x, uint32_t y, uint32_t weight, uint32_t h
       }
 
       //duplicate that line (height - 1)-times
-      duplicateLineDown(y, height - 1);
+      duplicateLineSegmentDown(y, height - 1, x, cursor - x);
       return weight * barcodeLength;
    }
    return 0;
@@ -375,6 +375,27 @@ void Bitmap::duplicateLineDown(const uint32_t y, const uint32_t times)
             uint32_t destinationPixel = getPixelIndex(x, y+i);
             setPixelValue(destinationPixel, value);
          }
+      }
+   }
+}
+
+
+//duplicate the line of y-coordinate n-times downdards
+void Bitmap::duplicateLineSegmentDown(const uint32_t y, const uint32_t times, uint32_t x, uint32_t len)
+{
+   const uint32_t max = (orientation == Orientation::Horizontally) ? this->width : this->height; //but can also be done for horizontal orientation
+   uint32_t xend = x + len;
+   if (xend > max) xend = max;
+
+   //copy pixel by pixel
+   for (; x < xend; ++x)
+   {
+      uint32_t sourcePixel = getPixelIndex(x, y);
+      bool value = getPixelValue(sourcePixel);
+      for (uint32_t i = 1; i <= times; ++i)
+      {
+         uint32_t destinationPixel = getPixelIndex(x, y+i);
+         setPixelValue(destinationPixel, value);
       }
    }
 }

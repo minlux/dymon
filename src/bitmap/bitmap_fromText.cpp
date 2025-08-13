@@ -1,6 +1,6 @@
 /* -- Includes ------------------------------------------------------------ */
 #include <sstream>
-#include <algorithm> 
+#include <algorithm>
 #include "bitmap.h"
 #include "FreeSans15pt7b.h"
 #include "FreeSans18pt7b.h"
@@ -30,9 +30,9 @@ typedef enum
 
 
 //trim trailing whitespaces
-void trim_right(std::string& s) 
+void trim_right(std::string& s)
 {
-   s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) 
+   s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
    {
       return !std::isspace(ch);
    }).base(), s.end());
@@ -60,6 +60,13 @@ Bitmap Bitmap::fromText(const uint32_t width, const uint32_t height, enum Bitmap
       if (line[i] == '\\')
       {
          ++i;
+
+         // HOME
+         if (line[i] == '~')
+         {
+            ++i;
+            yCursor = 0;
+         }
 
          // Size
          while (isdigit(line[i]))

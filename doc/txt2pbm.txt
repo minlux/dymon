@@ -1,0 +1,1 @@
+convert -size 272x252 canvas:white -gravity center -font Helvetica -pointsize 64 -fill black -annotate +0+0 "Bassist0\n4GB" b0_4gb.pbm
