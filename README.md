@@ -147,10 +147,8 @@ In folder `doc` you can find some example files that can be printed (on the resp
 ### dymon_srv
 
 ```
-Printserver for DYMO LabelWriter.
-
 Usage: dymon_srv
- [--help] [--version] [--usb=<DEVICE>] [--net=<IP>] [--model=<NUMBER>] [-p <NUMBER>] [--debug]
+ [--help] [--version] [--usb=<DEVICE>] [--net=<IP>] [--model=<NUMBER>] [-p <NUMBER>] [--serve=<PATH>] [--debug]
 
 Options:
   --help                    Print help and exit
@@ -159,6 +157,7 @@ Options:
   --net=<IP>                Force use of network printer with IP (e.g. '192.168.178.23')
   --model=<NUMBER>          Model number of DYMO LabelWriter (e.g. '450')
   -p, --port=<NUMBER>       TCP port number of server [default: 8092]
+  --serve=<PATH>            Path to directory statically served by HTTP server
   --debug                   Enable debug output
 ```
 
@@ -168,13 +167,15 @@ Note: On Windows you have to specify the `--usb` *DEVICE* by means of vendor-/pr
 **Examples:**
 
 ```
-./dymon_srv
-./dymon_srv --net 192.168.178.23
-./dymon_srv --usb /dev/usb/lp0   //Linux
-./dymon_srv --usb vid_0922       //Windows
+./dymon_srv --serve ../../www
+./dymon_srv --serve ../../www --net 192.168.178.23
+./dymon_srv --serve ../../www --usb /dev/usb/lp0   //Linux
+./dymon_srv --serve ../../www --usb vid_0922       //Windows
 ```
 
-Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092`. Fill in the form data and click the respective button to print the label(s).
+Start the webserver like showen in the example below. Then open you webbrowser to `localost:8092` and follow the links to the examples. Click the **print** button in the respective example to get a label.
+
+Eg. *Labelwriter*:
 
 ![dymon_srv](doc/webif.png)
 
