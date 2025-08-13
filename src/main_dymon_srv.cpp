@@ -272,7 +272,7 @@ static void m_on_options(const Request &req, Response &res)
 }
 
 /*
-   POST data like this expexted (Array of JSON objects):
+   POST data like this expexted (Single JSON object or array of objects):
    {
       "ip":"127.0.0.1", //don't care for USB printers
       "width":272,
@@ -288,6 +288,9 @@ static void m_on_options(const Request &req, Response &res)
      "text":"Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux", "count":1 }'
      -H "Content-Type: application/json"
      -X POST http://localhost:8092/labels
+
+   curl -H "Content-Type: application/json" --data @text-label.json http://localhost:8092/labels
+   curl -H "Content-Type: application/json" --data @saturn-labels.json http://localhost:8092/labels
 */
 static void m_on_post_labels(const Request &req, Response &res)
 {
@@ -411,21 +414,30 @@ static void m_print_labels_thread()
    }
 }
 
-static void m_print_labels(cJSON *label)
+//labels can be either an array of labels, or one single label
+static void m_print_labels(cJSON *labels)
 {
    // start label printing
-   cJSON * const ip = cJSON_GetObjectItemCaseSensitive(label, "ip"); // get IP
+   const bool isArray = cJSON_IsArray(labels);
+   cJSON * const first = isArray ? labels->child : labels;
+   cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
    const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
    int err = m_Printer->start(ipAddress); // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
    if (err == 0)
    {
-      //get number of copies to be printed
-      cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
-      const uint32_t copies = count ? count->valueint : 1;
+      cJSON * label;
+      cJSON * next;
+      for(label = first; label != NULL; label = next)
+      {
+         next = isArray ? label->next : nullptr;
+         //get number of copies to be printed
+         cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
+         const uint32_t copies = count ? count->valueint : 1;
 
-      // generate bitmap from label data
-      auto bitmap = TextLabel::fromJson(label);
-      m_Printer->print(&bitmap, copies);
+         // generate bitmap from label data
+         auto bitmap = TextLabel::fromJson(label);
+         m_Printer->print(&bitmap, copies, (next != nullptr));
+      }
    }
    // finalize printing process (make form-feed and close TCP connection to LabelWriter)
    m_Printer->end();
