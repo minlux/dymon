@@ -81,8 +81,8 @@ static void m_print_pbms_thread();
 /* -- (Module) Global Variables ------------------------------------------- */
 extern const unsigned char __wpm_receiver_html[];
 extern const unsigned int __wpm_receiver_html_len;
-static MessageQueue<cJSON *, 32> m_LabelQueue;
-static MessageQueue<Pbm, 32> m_PbmQueue;
+static MessageQueue<cJSON *, 64> m_LabelQueue;
+static MessageQueue<Pbm, 64> m_PbmQueue;
 static DymonPrinter *m_Printer;
 
 /* -- Implementation ------------------------------------------------------ */
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
    }
    else // net
    {
-      const char *const ip = argNet->sval[0];
+      const char *const ip = argNet->count ? argNet->sval[0] : nullptr;
       m_Printer = new DymonPrinter(new DymonNet, ip); // pass this to DymonNet::start, which expects a ip address string
       // m_Printer = new DymonPrinter(new DymonFile("/tmp/labels"), nullptr); // pass this to DymonNet::start, which expects a ip address string
    }
@@ -284,10 +284,10 @@ static void m_on_options(const Request &req, Response &res)
 
    Example, sending data with CURL:
    ----
-   curl -d '{"ip":"192.168.178.49", "width":272, "height":252, "orientation":0,
+   curl -d '{"ip":"192.168.178.67", "width":272, "height":252, "orientation":0,
      "text":"Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux", "count":1 }'
      -H "Content-Type: application/json"
-     -X POST http://localhost:8092/labelprinter/labels
+     -X POST http://localhost:8092/labels
 */
 static void m_on_post_labels(const Request &req, Response &res)
 {
@@ -329,7 +329,7 @@ static inline bool starts_with_p4_header(const uint8_t *data)
    Example:
    ----
    curl -H "Content-Type: application/octet-stream" --data-binary @eagle_25x25.pbm http://localhost:8092/pbm
-   curl -H "Content-Type: application/octet-stream" --data-binary @eagle_25x25.pbm http://localhost:8092/pbm?ip=192.168.178.21&copies=2
+   curl -H "Content-Type: application/octet-stream" --data-binary @eagle_25x25.pbm 'http://localhost:8092/pbm?ip=192.168.178.21&copies=2'
 
    Example
    ----
@@ -415,7 +415,7 @@ static void m_print_labels(cJSON *label)
 {
    // start label printing
    cJSON * const ip = cJSON_GetObjectItemCaseSensitive(label, "ip"); // get IP
-   const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "127.0.0.1";
+   const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
    int err = m_Printer->start(ipAddress); // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
    if (err == 0)
    {
