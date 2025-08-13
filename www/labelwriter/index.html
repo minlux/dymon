@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Labelwriter</title>
+  <style>
+    .st {
+      margin-top: -1.2em;
+      margin-bottom: 1em;
+    }
+
+    .hint {
+      margin-top: 2em;
+      /* margin-bottom: 1em; */
+    }
+
+    .pf fieldset {
+      margin: 0;
+      padding: 0.35em 0 0.75em;
+      border: 0;
+    }
+
+    .pf label {
+      margin: 0.5em 0 0.2em;
+    }
+
+    .pf input,
+    .pf select,
+    .pf textarea {
+      padding: 0.5em 0.6em;
+      display: inline-block;
+      border: 1px solid #ccc;
+      box-shadow: inset 0 1px 3px #ddd;
+      border-radius: 4px;
+      vertical-align: middle;
+      box-sizing: border-box;
+      min-width: 24em;
+    }
+
+    .pf select {
+      height: 2.25em;
+      border: 1px solid #ccc;
+      background-color: white;
+    }
+
+    .pf input:focus,
+    .pf select:focus,
+    .pf textarea:focus {
+      outline: 0;
+      border-color: #129FEA;
+    }
+
+    .pf input:invalid {
+      color: #b94a48;
+      border-color: #e9322d;
+    }
+
+    .pfa input,
+    .pfa textarea,
+    .pfa select,
+    .pfa {
+      display: inline-block;
+      *display: inline;
+      *zoom: 1;
+      vertical-align: middle;
+    }
+
+    .pfa textarea {
+      vertical-align: top;
+    }
+
+    .pfa .pcg {
+      margin-bottom: 0.5em;
+    }
+
+    .pfa .pcg label {
+      text-align: right;
+      display: inline-block;
+      vertical-align: middle;
+      width: 10em;
+      margin: 0 1em 0 0;
+    }
+
+    .pfa .pc {
+      margin: 1.5em 0 0 11em;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Labelwriter</h2>
+  <div class="pf pfa">
+    <fieldset>
+      <div class="pcg">
+        <label for="ip">Printer</label>
+        <input id="ip" type="text" placeholder="IP-Address of LabelWriter (optional)"
+          pattern="((^|\.)((25[0-5])|(2[0-4]\d)|(1\d\d)|([1-9]?\d))){4}$">
+      </div>
+      <div class="pcg">
+        <label for="format">Format</label>
+        <select id="format" name="business">
+          <!-- value defines the label size in pixels (@300dpi), Suffix 'R' means rotated by 90°-->
+          <option value="272x252" selected>25mm x 25mm</option>
+          <option value="400x960R">36mm x 89mm (Landscape)</option>
+        </select>
+      </div>
+      <div class="pcg">
+        <label for="text">Text</label>
+        <textarea id="text" rows="6">\24cTitle
+\3_
+Hello
+\rWorld
+\100#214</textarea>
+      </div>
+      <div class="pcg">
+        <label for="count">Count</label>
+        <input id="count" type="number" value="1" autocomplete="off">
+      </div>
+      <div class="pc">
+        <button onclick="print()">Print</button>
+      </div>
+    </fieldset>
+  </div>
+  <div class="hint">
+    You can use a minimal markup language to format each line of text.<br>
+    Format specifier starts at the beginning of every line with a backslash (\),<br>
+    followed by one or more of the following options:
+    <ul>
+      <li><i>NUMBER</i>: specify font size (15, 18, 21, 24), line width (pixels) or barcode weight</li>
+      <li>l/c/r: specify horizontal text alignment (left, centered, right)</li>
+      <li>_: to draw a horizontal line</li>
+      <li>#: to draw a EAN-9 barcode with the following value</li>
+    </ul>
+  </div>
+  <script>
+    function print() {
+      let format = document.getElementById('format').value; //selectedIndex
+      let width_height = format.split('x');
+      let width = parseInt(width_height[0]);
+      let height = parseInt(width_height[1]);
+      let orientation = (format.slice(-1) === 'R') ? 1 : 0;
+      //setup label
+      let label = {
+        'ip': document.getElementById('ip').value,
+        'width': width,
+        'height': height,
+        'orientation': orientation,
+        'text': document.getElementById('text').value,
+        'count': parseInt(document.getElementById('count').value) || 1,
+      };
+      // console.log(label);
+
+      //call REST API
+      let ajax = new XMLHttpRequest();
+      ajax.open('POST', '/labels');
+      ajax.send(JSON.stringify(label));
+    }
+  </script>
+</body>
+
+</html>

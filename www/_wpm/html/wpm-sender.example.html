@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>WPM Sender</title>
+</head>
+
+<body>
+  <h1>WPM Sender</h1>
+  <button id="send-button">Send</button>
+  <iframe id="receiver" src="/wpm" width="400" height="400"></iframe> <!-- with 'style="display: none;"' you can make it invisible-->
+
+  <!-- Optional: demo sender inside the same page -->
+  <script type="module">
+    import { sendWpmRequest } from '../js/wpm-sender.js';
+
+    document.getElementById("send-button").addEventListener("click", function () {
+      // Example: send a request to this same window
+      const request = {
+        id: crypto.randomUUID(),
+        method: "POST",
+        url: "/labels",
+        params: {
+          ip: "127.0.0.1",
+          copies: 1
+        },
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "ip": "127.0.0.1",
+          "width": 272,
+          "height": 252,
+          "orientation": 0,
+          "text": "\\24cTitle\n\\3_\nHello\n\\rWorld\n\n\\100#214",
+          "count": 1
+        }),
+      };
+
+      let receiver = document.getElementById('receiver').contentWindow;
+      // receiver.src = "http://xyz"; //modify the src dynamically
+      // receiver.style.display = 'none'; 'block'; // make (in-)visible
+
+      sendWpmRequest(request, receiver.contentWindow)
+        .then(response => {
+          console.log("Received WpmResponse:", response);
+          if (response.status == 200) {
+            response.body?.text().then(text => console.log("Response body:", text));
+          }
+        })
+        .catch(err => console.error("Error:", err));
+    });
+  </script>
+</body>
+
+</html>

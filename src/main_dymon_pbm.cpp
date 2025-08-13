@@ -6,17 +6,14 @@
 #include <iostream>
 #include <fstream>
 #include "dymon.h"
-#include "FreeSans15pt7b.h"
-#include "FreeSans18pt7b.h"
 #include "usbprint.h"
-#include "cJSON.h"
 #include "argtable3.h"
 #include "vt100.h"
 
 
 /* -- Defines ------------------------------------------------------------- */
 #define APP_NAME           "dymon_pbm"
-#define APP_VERSION        "2.0.0"
+#define APP_VERSION        "2.0.1"
 
 
 /* -- Types --------------------------------------------------------------- */
@@ -125,7 +122,7 @@ int main(int argc, char * argv[])
    }
 
    // Check for debug switch
-   if (!argDebug->count)
+   if (argDebug->count)
    {
       dymonDebug = 1;
    }
@@ -150,10 +147,7 @@ int main(int argc, char * argv[])
    if (argNet->count)
    {
       interfaze = NET;
-      const char * const ip = argNet->sval[0];
-      cJSON * json = cJSON_CreateObject();
-      cJSON_AddItemToObject(json, "ip", cJSON_CreateString(ip)); //wrap the ip address into a json object
-      path = (char *)json; //pass this to DymonNet::start, which expects a json object
+      path = (char *)argNet->sval[0]; //pass this to DymonNet::start, which expects a ip address string
    }
    else //if (argUsb->count)
    {
@@ -193,10 +187,11 @@ int main(int argc, char * argv[])
    int error = dymon->start((void *)path); //connect to labelwriter
    if (error == 0)
    {
+      auto bitmap = Dymon::Bitmap::fromFile(bitmapFile);
       const int copies = (argCopies->count ? argCopies->ival[0] : 1);
       for (int i = 0; i < copies; ++i) 
       {
-         dymon->print_bitmap(bitmapFile, ((i+1) < copies));
+         dymon->print(&bitmap, 0, ((i+1) < copies));
       }
       dymon->end(); //finalize printing (form-feed) and close socket
    }

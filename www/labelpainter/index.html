@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Labelpainter</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      user-select: none;
+    }
+
+    #toolbar-left {
+      background: #ddd;
+      width: 80px;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 5px;
+      box-sizing: border-box;
+      border-right: 1px solid #aaa;
+    }
+
+    #toolbar-left button {
+      margin: 5px 0;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+      background: #eee;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+
+    #toolbar-left button.active,
+    #toolbar-left button:hover {
+      background: #bbb;
+    }
+
+    #toolbar-top {
+      position: fixed;
+      left: 80px;
+      top: 0;
+      right: 0;
+      height: 50px;
+      background: #ccc;
+      border-bottom: 1px solid #aaa;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      box-sizing: border-box;
+      gap: 10px;
+      font-size: 14px;
+      z-index: 10;
+    }
+
+    #toolbar-top select,
+    #toolbar-top button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #999;
+      background: #eee;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #toolbar-top button:hover,
+    #toolbar-top select:hover {
+      background: #ddd;
+    }
+
+    #toolbar-bottom {
+      position: fixed;
+      left: 80px;
+      bottom: 0;
+      right: 0;
+      height: 50px;
+      background: #ccc;
+      border-top: 1px solid #aaa;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      box-sizing: border-box;
+      gap: 10px;
+      font-size: 14px;
+      z-index: 10;
+    }
+
+    #toolbar-bottom label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #toolbar-bottom select,
+    #toolbar-bottom input[type="number"] {
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #999;
+    }
+
+    #toolbar-bottom button {
+      padding: 4px 8px;
+      cursor: pointer;
+      border: 1px solid #999;
+      background: #eee;
+      border-radius: 4px;
+    }
+
+    #toolbar-bottom button.active {
+      background: #bbb;
+    }
+
+    #canvas-container {
+      position: relative;
+      flex: 1;
+      margin-left: 10px;
+      margin-top: 60px;
+      margin-bottom: 50px;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+    }
+
+    canvas {
+      position: absolute;
+      border: 1px solid #999;
+      /* background: white; */
+      cursor: crosshair;
+      left: 0;
+      top: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="toolbar-left">
+    <button data-tool="pencil" class="active">Pencil</button>
+    <button data-tool="rubber">Rubber</button>
+    <button data-tool="rectangle">Rectangle</button>
+    <button data-tool="circle">Circle</button>
+    <button data-tool="line">Line</button>
+    <button data-tool="text">Text</button>
+  </div>
+
+  <div id="toolbar-top">
+    <label for="canvasSize">Canvas Größe:</label>
+    <select id="canvasSize">
+      <option value="288x272" selected>288 x 272 px</option>
+      <option value="960x400">960 x 400 px</option>
+    </select>
+    <button id="clearCanvasBtn" title="Canvas löschen">Clear</button>
+    <button id="printCanvasBtn" title="Canvas drucken">Print</button>
+  </div>
+
+  <div id="canvas-container" style="position: relative;">
+    <canvas id="canvas" width="288" height="272" style="z-index: 0;"></canvas>
+    <canvas id="tempCanvas" width="288" height="272" style="z-index: 1;"></canvas>
+  </div>
+
+
+
+  <div id="toolbar-bottom">
+    <label>
+      Brushsize:
+      <input type="number" id="brushSize" min="1" max="50" value="3" />
+    </label>
+    <label>
+      Font:
+      <select id="fontFamily">
+        <option value="Arial">Arial</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Verdana">Verdana</option>
+      </select>
+    </label>
+    <label>
+      Fontsize:
+      <input type="number" id="fontSize" min="8" max="144" value="40" />
+    </label>
+    <button id="boldBtn" title="Fett (Bold)">B</button>
+    <button id="italicBtn" title="Kursiv (Italic)">I</button>
+  </div>
+
+  <script src="script.js" type="module"></script>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let drawing = false;
+    let tool = 'pencil';
+    let startX = 0;
+    let startY = 0;
+
+    let brushSizeInput = document.getElementById('brushSize');
+    let fontFamilySelect = document.getElementById('fontFamily');
+    let fontSizeInput = document.getElementById('fontSize');
+    let boldBtn = document.getElementById('boldBtn');
+    let italicBtn = document.getElementById('italicBtn');
+    let canvasSizeSelect = document.getElementById('canvasSize');
+    let clearCanvasBtn = document.getElementById('clearCanvasBtn');
+    let printCanvasBtn = document.getElementById('printCanvasBtn');
+
+    let isBold = false;
+    let isItalic = false;
+
+    // Tool buttons
+    const toolButtons = document.querySelectorAll('#toolbar-left button');
+    toolButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toolButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tool = btn.dataset.tool;
+        if(tool === 'text') {
+          console.log("Cursor")
+          tempCanvas.style.cursor = 'text';
+        } else {
+          tempCanvas.style.cursor = 'crosshair';
+        }
+      });
+    });
+
+    // Bold & Italic toggle
+    boldBtn.addEventListener('click', () => {
+      isBold = !isBold;
+      boldBtn.classList.toggle('active');
+    });
+    italicBtn.addEventListener('click', () => {
+      isItalic = !isItalic;
+      italicBtn.classList.toggle('active');
+    });
+
+    // Clear temp canvas for shape drawing
+    //   let tempCanvas = document.createElement('canvas');
+    let tempCanvas = document.getElementById('tempCanvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    let tempCtx = tempCanvas.getContext('2d');
+
+    function clearTemp() {
+      tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+    }
+    clearTemp();
+
+    // Drawing handlers
+    tempCanvas.addEventListener('mousedown', e => {
+      const rect = tempCanvas.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      drawing = true;
+
+      if (tool === 'text') {
+        const text = prompt('Gib den Text ein:');
+        if (text) {
+          ctx.font = `${isItalic ? 'italic ' : ''}${isBold ? 'bold ' : ''}${fontSizeInput.value}px ${fontFamilySelect.value}`;
+          ctx.fillStyle = 'black';
+          ctx.fillText(text, startX, startY);
+        }
+        drawing = false;
+      } else if (tool === 'pencil' || tool === 'rubber') {
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+      }
+    });
+
+    tempCanvas.addEventListener('mousemove', e => {
+      if (!drawing) return;
+
+      const rect = tempCanvas.getBoundingClientRect();
+      let mouseX = e.clientX - rect.left;
+      let mouseY = e.clientY - rect.top;
+
+      if (tool === 'pencil') {
+        ctx.lineWidth = brushSizeInput.value;
+        ctx.strokeStyle = 'black';
+        ctx.lineCap = 'round';
+        ctx.lineTo(mouseX, mouseY);
+        ctx.stroke();
+      } else if (tool === 'rubber') {
+        ctx.clearRect(mouseX - brushSizeInput.value / 2, mouseY - brushSizeInput.value / 2, brushSizeInput.value, brushSizeInput.value);
+      } else if (['rectangle', 'circle', 'line'].includes(tool)) {
+        clearTemp();
+        let width = mouseX - startX;
+        let height = mouseY - startY;
+
+        tempCtx.lineWidth = brushSizeInput.value;
+        tempCtx.strokeStyle = 'black';
+
+        if (tool === 'rectangle') {
+          tempCtx.strokeRect(startX, startY, width, height);
+        } else if (tool === 'circle') {
+          tempCtx.beginPath();
+          let radius = Math.sqrt(width * width + height * height);
+          tempCtx.arc(startX, startY, radius, 0, 2 * Math.PI);
+          tempCtx.stroke();
+        } else if (tool === 'line') {
+          tempCtx.beginPath();
+          tempCtx.moveTo(startX, startY);
+          tempCtx.lineTo(mouseX, mouseY);
+          tempCtx.stroke();
+        }
+
+        // Zeichne temporäres Bild über Hauptcanvas
+        //   ctx.clearRect(0, 0, canvas.width, canvas.height);
+        //   ctx.drawImage(tempCanvas, 0, 0);
+      }
+    });
+
+    tempCanvas.addEventListener('mouseup', e => {
+      if (!drawing) return;
+      drawing = false;
+
+      if (['rectangle', 'circle', 'line'].includes(tool)) {
+        const rect = tempCanvas.getBoundingClientRect();
+        let mouseX = e.clientX - rect.left;
+        let mouseY = e.clientY - rect.top;
+        let width = mouseX - startX;
+        let height = mouseY - startY;
+
+        ctx.lineWidth = brushSizeInput.value;
+        ctx.strokeStyle = 'black';
+
+        if (tool === 'rectangle') {
+          ctx.strokeRect(startX, startY, width, height);
+        } else if (tool === 'circle') {
+          ctx.beginPath();
+          let radius = Math.sqrt(width * width + height * height);
+          ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+          ctx.stroke();
+        } else if (tool === 'line') {
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(mouseX, mouseY);
+          ctx.stroke();
+        }
+
+        clearTemp();
+      }
+    });
+
+    tempCanvas.addEventListener('mouseleave', e => {
+      if (drawing) {
+        drawing = false;
+        clearTemp();
+      }
+    });
+
+    // Change canvas size
+    canvasSizeSelect.addEventListener('change', () => {
+      const size = canvasSizeSelect.value.split('x');
+      const w = parseInt(size[0]);
+      const h = parseInt(size[1]);
+
+      // Bildinhalt zwischenspeichern
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // Canvasgröße anpassen
+      canvas.width = w;
+      canvas.height = h;
+
+      // Temporäres Canvas auch anpassen
+      tempCanvas.width = w;
+      tempCanvas.height = h;
+      clearTemp();
+
+      // Hintergrund weiß füllen
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Bildinhalt wiederherstellen (beschnitten oder leer, falls größer oder kleiner)
+      ctx.putImageData(imageData, 0, 0);
+    });
+
+    // Canvas löschen
+    clearCanvasBtn.addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Canvas drucken
+    printCanvasBtn.addEventListener('click', () => {
+
+    });
+
+    // Initial canvas mit weiß füllen
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  </script>
+</body>
+
+</html>

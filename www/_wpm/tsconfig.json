@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2020", // JavaScript version output
+    "module": "esnext", // Module system (for imports/exports)
+    "outDir": "js", // Output folder for compiled JS
+    "strict": true, // Enable strict type checking
+    "esModuleInterop": true, // Allows default import of CommonJS modules
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "*.ts"
+  ]
+}

@@ -1,0 +1,15 @@
+Call `tsc` to compile *.ts files to js/*.js
+
+Note:
+Maybe you need to install *typescript* first:
+
+```
+npm install -g typescript
+```
+
+For usage, include the output in html:
+
+```
+<script type="module" src="js/wpm-sender.js"></script>
+<script type="module" src="js/wpm-receiver.js"></script>
+```

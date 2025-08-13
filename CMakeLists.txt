@@ -6,6 +6,7 @@ include_directories(
    libs/cjson
    libs/cpp-httplib
    libs/argtable3
+   libs/base64
    src/barcode
    src/bitmap
    src/bitmap/fonts
@@ -30,13 +31,9 @@ endif()
 
 #print bitmap-files from command line
 add_executable(dymon_pbm
-  libs/cjson/cJSON.c
   libs/argtable3/argtable3.c
-  src/bitmap/bitmap.cpp
-  src/bitmap/glyphIterator.cpp
-  src/bitmap/utf8decoder.cpp
-  src/barcode/barcodeEan8.cpp
   src/dymon/dymon.cpp
+  src/dymon/dymon_bitmap.cpp
   ${dymon_x}
   src/main_dymon_pbm.cpp
 )
@@ -52,16 +49,19 @@ endif()
 add_executable(dymon_srv
   libs/cjson/cJSON.c
   libs/argtable3/argtable3.c
+  libs/base64/base64.c
   src/bitmap/bitmap.cpp
   src/bitmap/bitmap_fromText.cpp
   src/bitmap/glyphIterator.cpp
   src/bitmap/utf8decoder.cpp
   src/barcode/barcodeEan8.cpp
   src/dymon/dymon.cpp
+  src/dymon/dymon_bitmap.cpp
+  src/dymon/dymon_file.cpp
   ${dymon_x}
-  src/print_json.cpp
   src/main_dymon_srv.cpp
-  src/index_html.c
+  src/text_label.cpp
+  src/wpm_html.c
 )
 target_link_libraries(dymon_srv
   pthread

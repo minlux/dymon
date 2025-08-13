@@ -18,16 +18,11 @@
 
 bool DymonNet::connect(void * arg)
 {
-   if (arg == nullptr)
+   const char * printerIp = (const char *)arg;
+   if (printerIp == nullptr)
    {
       return false;
    }
-   cJSON * ip = cJSON_GetObjectItemCaseSensitive((cJSON *)arg, "ip"); //get IP
-   if (!cJSON_IsString(ip))
-   {
-      return false;
-   }
-   const char * printerIp = ip->valuestring;
    constexpr uint16_t port = 9100;
 
    //try to create socket
