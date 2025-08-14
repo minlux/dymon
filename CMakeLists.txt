@@ -61,6 +61,7 @@ add_executable(dymon_srv
   ${dymon_x}
   src/main_dymon_srv.cpp
   src/text_label.cpp
+  src/labelwriter_html.c
   src/wpm_html.c
 )
 target_link_libraries(dymon_srv

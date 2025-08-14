@@ -81,6 +81,8 @@ static void m_print_pbms_thread();
 /* -- (Module) Global Variables ------------------------------------------- */
 extern const unsigned char __wpm_receiver_html[];
 extern const unsigned int __wpm_receiver_html_len;
+extern const unsigned char __labelwriter_index_html[];
+extern const unsigned int __labelwriter_index_html_len;
 static MessageQueue<cJSON *, 64> m_LabelQueue;
 static MessageQueue<Pbm, 64> m_PbmQueue;
 static DymonPrinter *m_Printer;
@@ -226,20 +228,8 @@ int main(int argc, char *argv[])
    else
    {
       svr.Get("/", [&](const Request & /*req*/, Response &res) {
-         res.set_content(
-            "<!doctype html>"
-            "<html lang=\"en\"><head><meta charset=\"utf-8\"><title>DYMON Printserver</title>"
-            "<style>.st{margin-top:-1.2em;margin-bottom:1em}</style>"
-            "</head><body>"
-            "<h2>Printserver for DYMO LabelWrite</h2>"
-            "<div class=st><i>by minlux, V" APP_VERSION "</i></div>"
-            "<ul><li><pre>POST /labels</pre></li><li><pre>POST /pbm</pre></li></ul>"
-            "<hr>"
-            "<p>Set <code>serve</code> argument to directory <i>www</i>, e.g. <pre>--serve www</pre> to get an example UI</p>"
-            "</body></html>"
-            , 
-            "text/html"
-         );
+         res.set_header("Access-Control-Allow-Origin", "*"); // CORS
+         res.set_content((const char *)__labelwriter_index_html, __labelwriter_index_html_len, "text/html");
       });
    }
 
