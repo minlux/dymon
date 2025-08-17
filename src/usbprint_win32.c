@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <wtypesbase.h> //this comes mingw64 and is required to define LPVOID etc.
 #include <winreg.h>
 #include <setupapi.h>
 #include <devguid.h>

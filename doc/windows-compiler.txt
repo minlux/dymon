@@ -1,0 +1,50 @@
+On https://github.com/niXman/mingw-builds-binaries/releases, there are multiple binary builds of mingw for windows available.
+The differe in theire names like:
+
+- release-mcf-seh-ucrt-rt
+- release-posix-seh-msvcrt-rt
+- release-posix-seh-ucrt-rt
+- release-win32-seh-msvcrt-rt
+- release-win32-seh-ucrt-rt
+
+What is the difference?
+
+ChatGPT:
+Here’s what the different parts in those MinGW‑w64 build names mean:
+
+**Architecture & Threading Model**
+- mcf: A newer threading model offering performance improvements. It uses GCC’s internal gthread interface. Requires nonstandard support.
+- posix: Enables POSIX-style threading, bringing compatibility with pthread. Essential if you're using C++11 threading features (std::thread, <mutex>, etc.). This uses the winpthreads library. 
+- win32: Uses Windows native threading API. Doesn’t support POSIX threading, so C++11 thread features may not work as expected. 
+
+
+**Exception Handling Model**
+- seh (Structured Exception Handling): Default on x86‑64. Efficient and reliable for 64‑bit builds. 
+- dwarf: Used in 32‑bit builds. Faster than SJLJ but has limitations when mixing with other compilers' code. 
+
+
+**C Runtime Library**
+- msvcrt: The traditional Microsoft Visual C++ Runtime (msvcrt.dll). Available system-wide but outdated—lacks C99/C11 features, limited UTF‑8 support, and includes compatibility quirks. 
+- ucrt: The Universal C Runtime introduced with Windows 10 and used by modern MSVC toolchains. Standards‑compliant (C99/11), better MSVC compatibility—but may require redistributable for older Windows. 
+
+Note: MinGW‑w64 v12 and later even defaults to UCRT unless otherwise configured; switching CRT requires rebuilding the entire toolchain including headers and libraries. 
+
+
+
+
+Finally, I ended with those, which seems to work (but requires Compiler Flag "-static-libstdc++")
+
+mklink /d C:\mingw32 C:\Users\Manuel\Downloads\i686-15.2.0-release-mcf-dwarf-ucrt-rt_v13-rev0\mingw32
+mklink /d C:\mingw64 C:\Users\Manuel\Downloads\x86_64-15.2.0-release-mcf-seh-ucrt-rt_v13-rev0\mingw64
+
+
+C:\>gcc --version
+gcc (x86_64-mcf-seh-rev0, Built by MinGW-Builds project) 15.2.0
+Copyright (C) 2025 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Note: 
+The *posix* variants, wasn't working at all. 
+The others were not tested in combination with the (obviosly mandatory) "-static-libstdc++" flag.

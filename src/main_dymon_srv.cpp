@@ -6,12 +6,6 @@
 //-----------------------------------------------------------------------------
 
 /* -- Includes ------------------------------------------------------------ */
-#ifdef _WIN32
-// see https://www.heise.de/ct/hotline/IPv6-Programme-mit-MinGW-1100748.html
-#define _WIN32_WINNT 0x501
-#define IPV6_V6ONLY 27
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <string>

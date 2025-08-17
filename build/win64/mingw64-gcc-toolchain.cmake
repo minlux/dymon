@@ -1,7 +1,7 @@
 # https://github.com/niXman/mingw-builds-binaries/releases
-#  https://github.com/niXman/mingw-builds-binaries/releases/download/15.2.0-rt_v13-rev0/i686-15.2.0-release-mcf-dwarf-ucrt-rt_v13-rev0.7z
+#  https://github.com/niXman/mingw-builds-binaries/releases/download/15.2.0-rt_v13-rev0/x86_64-15.2.0-release-mcf-seh-ucrt-rt_v13-rev0.7z
 set(CMAKE_SYSTEM_NAME Windows)
-set(TOOLCHAIN_ROOT c:/mingw32)
+set(TOOLCHAIN_ROOT c:/mingw64)
 
 # Set up the compiler and assembler
 set(CMAKE_C_COMPILER   ${TOOLCHAIN_ROOT}/bin/gcc.exe)
