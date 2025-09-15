@@ -183,6 +183,10 @@ This will print a label like:
 
 ![dymon_srv_label](doc/dymon_srv.png)
 
+See also the *openapi* description of the REST endpoints:
+- [YAML](doc/dymon_srv.yaml)
+- [PDF](doc/dymon_srv.pdf)
+
 
 ## PBM Creation
 

@@ -1,0 +1,162 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: dymon_srv
+  description: REST API of 'dymon_srv' - a printserver for DYMO LabelWriter.
+  pdf: To transform this docu into PDF you can use https://mrin9.github.io/RapiPdf/. Start the NodeJS based HTTP server within this directory ($pjt\doc> node serve.js). Then paste the URL http://localhost:8080/app_api.yaml into rapi-pdf's (1st) form field to generate a PDF of this spec! Probably you have to remove this line before.
+servers:
+  - url: http://localhost:8092/
+
+
+
+paths:
+  /wpm:
+    get:
+      summary: Return a HTML site, that exchange using window.postMessage() in a "fetch-like" mannor; See folder www/_wpm for examples
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+                format: html
+                description: HTML site
+
+
+  /labels:
+    post:
+      summary: Create one or multiple labels
+      description: Accepts either a single label object or an array of label objects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Label'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/Label'
+            examples:
+              curl_example:
+                summary: Example using curl
+                description: |
+                  Example curl command to send a single label:
+                  ```bash
+                  curl -X POST "http://localhost:8092/labels" \
+                       -H "Content-Type: application/json" \
+                       -d '{
+                             "ip": "192.168.178.67",
+                             "width": 272,
+                             "height": 252,
+                             "orientation": 0,
+                             "text": "Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux",
+                             "count": 2
+                           }'
+                  ```
+                value:
+                  ip: "192.168.178.67"
+                  width: 272
+                  height: 252
+                  orientation: 0
+                  text: "Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux"
+                  count: 2
+      responses:
+        '200':
+          description: OK
+
+
+  /pbm:
+    post:
+      summary: Upload PBM bitmap(s)
+      description: |
+        Accepts either a single P4-encoded PBM as binary or a text file containing one or more base64-encoded PBMs separated by newline.  
+        Optional query parameters can specify the target printer IP and number of copies.
+      parameters:
+        - in: query
+          name: ip
+          schema:
+            type: string
+            format: ipv4
+          description: IP address of the DYMO LabelWriter printer; Don't care for USB printers; May be overwritten by dymon_src command line parameter '--net'
+        - in: query
+          name: copies
+          schema:
+            type: integer
+            default: 1
+          description: Number of copies to print
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+            description: Single P4 PBM file as binary
+            examples:
+              curl_binary:
+                summary: Upload single PBM via curl
+                description: |
+                  Example curl command to upload a single PBM file:
+                  ```bash
+                  curl -H "Content-Type: application/octet-stream" \
+                       --data-binary @eagle_25x25.pbm \
+                       "http://localhost:8092/pbm?ip=192.168.178.21&copies=2"
+                  ```
+          text/plain:
+            schema:
+              type: string
+              format: text
+            description: Text file containing base64-encoded PBMs, separated by newlines
+            examples:
+              curl_base64:
+                summary: Upload multiple PBMs via curl
+                description: |
+                  Example curl command to upload multiple base64-encoded PBMs:
+                  ```bash
+                  base64 -w 0 eagle_25x25.pbm > collage.txt
+                  echo >> collage.txt
+                  base64 -w 0 label_25x25.pbm > collage.txt
+                  curl -i -H "Content-Type: text/plain" \
+                       --data-binary @collage.txt \
+                       http://localhost:8092/pbm
+                  ```
+      responses:
+        '200':
+          description: PBM(s) processed successfully
+
+
+components:
+  schemas:
+    Label:
+      type: object
+      required:
+        - width
+        - height
+        - orientation
+        - text
+      properties:
+        ip:
+          type: string
+          description: IP address of the DYMO LabelWriter printer; Don't care for USB printers; May be overwritten by dymon_src command line parameter '--net'
+          format: ipv4
+        width:
+          type: integer
+          description: Label width in pixels
+          example: 272
+        height:
+          type: integer
+          description: Label height in pixels
+          example: 252
+        orientation:
+          type: integer
+          description: Rotation (0^=0°, 1^=90°, 2^=180°, 3^=270°)
+          example: 0
+        text:
+          type: string
+          description: Text to print on label; See README.md for supported markup
+          example: "Manuel\nminlux.de\n\\_\nhttps://github.com/minlux"
+        count:
+          type: integer
+          description: Number of copies to print
+          example: 2
