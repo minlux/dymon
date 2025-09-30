@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
    struct arg_lit *argVersion;
    struct arg_str *argUsb;
    struct arg_str *argNet;
+   struct arg_str *argDir;
    struct arg_int *argModel;
    struct arg_int *argPort;
    struct arg_str *argServe;
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
            argUsb = arg_str0(NULL, "usb", "<DEVICE>", "Use USB printer device (e.g. '/dev/usb/lp1')"),
 #endif
            argNet = arg_str0(NULL, "net", "<IP>", "Force use of network printer with IP (e.g. '192.168.178.23')"),
+           argDir = arg_str0(NULL, "dir", "<DIRECTORY>", "Print labels as PBM files into directory"),
            argModel = arg_int0(NULL, "model", "<NUMBER>", "Model number of DYMO LabelWriter (e.g. '450')"),
            argPort = arg_int0("p", "port", "<NUMBER>", "TCP port number of server [default: 8092]"),
            argServe = arg_str0(NULL, "serve", "<PATH>", "Path to directory statically served by HTTP server"),
@@ -151,10 +153,10 @@ int main(int argc, char *argv[])
       dymonDebug = 1;
    }
 
-   // Ensure that there is at most one interface specified
-   if (argUsb->count && argNet->count)
+   // Ensure that there is at at most one interface specified
+   if ((argUsb->count + argNet->count + argDir->count) > 1)
    {
-      puts(VT100_RED "Error:" VT100_RESET " Only one interface allowed (one of '--usb' or '--net')\n");
+      puts(VT100_RED "Error:" VT100_RESET " Only one interface allowed (one of '--usb', '--net' or '--dir')\n");
       print_usage(argtable);
       return -1;
    }
@@ -164,7 +166,11 @@ int main(int argc, char *argv[])
    Server svr;
 
    // get interfaze and path
-   if (argUsb->count)
+   if (argDir->count)
+   {
+      m_Printer = new DymonPrinter(new DymonFile(argDir->sval[0]), nullptr);
+   }
+   else if (argUsb->count)
    {
       const char *const dev = argUsb->sval[0];
       const int model = (argModel->count ? argModel->ival[0] : 0);
@@ -190,7 +196,6 @@ int main(int argc, char *argv[])
    {
       const char *const ip = argNet->count ? argNet->sval[0] : nullptr;
       m_Printer = new DymonPrinter(new DymonNet, ip); // pass this to DymonNet::start, which expects a ip address string
-      // m_Printer = new DymonPrinter(new DymonFile("/tmp/labels"), nullptr); // pass this to DymonNet::start, which expects a ip address string
    }
 
    // greetings
@@ -404,27 +409,30 @@ static void m_print_labels(cJSON *labels)
    // start label printing
    const bool isArray = cJSON_IsArray(labels);
    cJSON * const first = isArray ? labels->child : labels;
-   cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
-   const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
-   int err = m_Printer->start(ipAddress); // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
-   if (err == 0)
+   if (first) // deal with empty array
    {
-      cJSON * label;
-      cJSON * next;
-      for(label = first; label != NULL; label = next)
+      cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
+      const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
+      int err = m_Printer->start(ipAddress); // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
+      if (err == 0)
       {
-         next = isArray ? label->next : nullptr;
-         //get number of copies to be printed
-         cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
-         const uint32_t copies = count ? count->valueint : 1;
+         cJSON * label;
+         cJSON * next;
+         for(label = first; label != NULL; label = next)
+         {
+            next = isArray ? label->next : nullptr;
+            //get number of copies to be printed
+            cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
+            const uint32_t copies = count ? count->valueint : 1;
 
-         // generate bitmap from label data
-         auto bitmap = TextLabel::fromJson(label);
-         m_Printer->print(&bitmap, copies, (next != nullptr));
+            // generate bitmap from label data
+            auto bitmap = TextLabel::fromJson(label);
+            m_Printer->print(&bitmap, copies, (next != nullptr));
+         }
       }
+      // finalize printing process (make form-feed and close TCP connection to LabelWriter)
+      m_Printer->end();
    }
-   // finalize printing process (make form-feed and close TCP connection to LabelWriter)
-   m_Printer->end();
 }
 
 
