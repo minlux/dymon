@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.5)
 project(dymon)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=gnu++17 -static-libstdc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=gnu++17 -static -static-libgcc -static-libstdc++")
 
 include_directories(
    libs/cjson
