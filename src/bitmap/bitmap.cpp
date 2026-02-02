@@ -116,12 +116,11 @@ int Bitmap::drawText(const int32_t x, const int32_t y, const char * text)
       if (character > 0)
       {
          //draw pixel for pixel of character
-         const int32_t origin = getPixelIndex(cursor, y);
          status = glyphIterator->init(this->font, character);
          while (status)
          {
             //calculate pixel index to be set to the respective value
-            pixel = getPixelIndex(origin, glyphIterator->xOffset, glyphIterator->yOffset);
+            pixel = getPixelIndex(cursor + glyphIterator->xOffset, y + glyphIterator->yOffset);
             if (pixel >= 0)
             {
                //set pixel to its value
@@ -250,47 +249,6 @@ int32_t Bitmap::getPixelIndex(const int32_t x, const int32_t y)
       return ((this->width - 1) - y) + (x * this->width);
    }
 }
-
-//get index of pixel relativ to another pixel (moved by x-pixels to the right, y-pixels down)
-int32_t Bitmap::getPixelIndex(const int32_t pixel, const int32_t xoff, const int32_t yoff)
-{
-   int32_t index = pixel;
-   if (orientation == Orientation::Horizontally)
-   {
-      index += xoff;
-      if (index >= 0)
-      {
-         if ((index / this->width) == (pixel / this->width)) //stay in the same line (as pixel was)?
-         {
-            index += yoff * this->width;
-            if ((index >= 0) && (index < this->length))
-            {
-               return index;
-            }
-         }
-      }
-   }
-   else //Vertically
-   {
-      if (index >= yoff)
-      {
-         index -= yoff;
-         if ((index / this->width) == (pixel / this->width)) //stay in the same line (as pixel was)?
-         {
-            index += xoff * this->width;
-            if ((index >= 0) && (index < this->length))
-            {
-               return index;
-            }
-         }
-      }
-   }
-   //otherwise: "label-overflow"
-   return -1;
-}
-
-
-
 
 
 

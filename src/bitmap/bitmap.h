@@ -47,7 +47,7 @@ public:
 
 //factory function
    static Bitmap fromText(const uint32_t width, const uint32_t height, enum Orientation orientation,
-                           const char * const text);
+                           const char * const text, const uint32_t defaultFontSize = 0);
 
 
 /*readonly*/
@@ -59,7 +59,6 @@ public:
 
 private:
    int32_t getPixelIndex(const int32_t x, const int32_t y); //return -1 in case of overflow
-   int32_t getPixelIndex(const int32_t pixel, const int32_t xoff, const int32_t yoff); //return -1 in case of overflow
    bool getPixelValue(const int32_t pixel);
    void setPixelValue(const int32_t pixel, const bool value);
    void duplicateLineDown(const uint32_t y, const uint32_t times = 1); //duplicate the line of y-coordinate n-times downdards

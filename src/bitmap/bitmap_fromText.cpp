@@ -41,7 +41,7 @@ void trim_right(std::string& s)
 
 
 Bitmap Bitmap::fromText(const uint32_t width, const uint32_t height, enum Bitmap::Orientation orientation,
-                        const char * const text)
+                        const char * const text, const uint32_t defaultFontSize)
 {
    Bitmap bitmap(width, height, orientation, &FreeSans15pt7b);
    uint32_t yCursor = 0;
@@ -53,7 +53,7 @@ Bitmap Bitmap::fromText(const uint32_t width, const uint32_t height, enum Bitmap
    {
       unsigned int barcode = 0;
       Alignment_t align = ALIGN_LEFT;
-      unsigned int size = 0;
+      unsigned int size = (unsigned int)defaultFontSize;
       bool hline = false;
       unsigned int i = 0;
       trim_right(line);

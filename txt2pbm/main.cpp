@@ -59,6 +59,7 @@ int main(int argc, char * argv[])
    struct arg_int * argWidth;
    struct arg_int * argHeight;
    struct arg_str * argComment;
+   struct arg_int * argFontSize;
    struct arg_lit * argRotate;
    struct arg_file * argOutfile;
    struct arg_file * argInfile;
@@ -70,6 +71,7 @@ int main(int argc, char * argv[])
       argWidth = arg_int1("w", "width", "<PIXEL>", "Width of PBM"),
       argHeight = arg_int1("h", "height", "<HEIGHT>", "Height of PBM"),
       argComment = arg_str0("c", "comment", "<TEXT>", "Comment, embedded into PBM"),
+      argFontSize = arg_int0(NULL, "font-size", "<SIZE>", "Default font size [default: 15]"),
       argRotate = arg_lit0("r", "rotate", "Rotate final PBM by 90 degrees"),
       argOutfile = arg_file1("o", "output", "<OUTPUT>", "Output PBM file (use '-' for stdout)"),
       argInfile = arg_file0(NULL, NULL, "<INPUT>", "Input text file [default: stdin]"),
@@ -147,7 +149,8 @@ int main(int argc, char * argv[])
    }
 
    // Create bitmap
-   Bitmap bitmap = Bitmap::fromText(width, height, argRotate->count ? Bitmap::Vertically : Bitmap::Horizontally, text.c_str());
+   const uint32_t fontSize = (argFontSize->count > 0) ? (uint32_t)(argFontSize->ival[0]) : 0u;
+   Bitmap bitmap = Bitmap::fromText(width, height, argRotate->count ? Bitmap::Vertically : Bitmap::Horizontally, text.c_str(), fontSize);
 
    // Write bitmap into file
    // PBM Header
