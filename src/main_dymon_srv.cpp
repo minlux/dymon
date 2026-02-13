@@ -21,7 +21,7 @@
 
 /* -- Defines ------------------------------------------------------------- */
 #define APP_NAME "dymon_srv"
-#define APP_VERSION "2.2.0"
+#define APP_VERSION "2.2.2"
 
 /* -- Types --------------------------------------------------------------- */
 using namespace std;

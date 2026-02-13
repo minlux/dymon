@@ -45,10 +45,9 @@ public:
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
    void end(); //finalize printing (form-feed) and close socket
-   // void _debugEnd(); //close without form feed
 
    //status information (are read/updated in 'start', 'read_status' and at the end of 'print/print_bitmap')
-   inline bool paperOut() { return (status[15] != 0); } //no label in printer
+   inline bool paperOut() { return lw450flavor ? ((status[0] & (1<<5)) != 0) : (status[15] != 0); } //no label in printer
    //??? inline bool topOfForm() { return (status[7] != 0); } //the hole in the label is at the top, so that the label could be precisly teared down
    //??? inline bool printerBusy() { return (status[0] != 0); } //printer is busy - may be allocated by me or by someone other
 
@@ -61,10 +60,6 @@ private:
    virtual void close() = 0;
 
 private:
-   static const uint8_t _configuration[];
-   static const uint8_t _labelIndexHeightWidth[];
-   static const uint8_t _labelFeedStatus[];
-   static const uint8_t _final[];
    bool connected;
    bool lw450flavor;
    uint32_t session;
