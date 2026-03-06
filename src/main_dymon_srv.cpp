@@ -80,6 +80,7 @@ extern const unsigned int __labelwriter_index_html_len;
 static MessageQueue<cJSON *, 64> m_LabelQueue;
 static MessageQueue<Pbm, 64> m_PbmQueue;
 static DymonPrinter *m_Printer;
+static std::string m_PbmComment;
 
 /* -- Implementation ------------------------------------------------------ */
 
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
    // get interfaze and path
    if (argDir->count)
    {
-      m_Printer = new DymonPrinter(new DymonFile(argDir->sval[0]), nullptr);
+      m_Printer = new DymonPrinter(new DymonFile(argDir->sval[0]), (const char *)&m_PbmComment);
    }
    else if (argUsb->count)
    {
@@ -424,6 +425,18 @@ static void m_print_labels(cJSON *labels)
             //get number of copies to be printed
             cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
             const uint32_t copies = count ? count->valueint : 1;
+
+            // get meta information
+            // DymonFile stores this information into the comment of the generated pbm file
+            cJSON * const meta = cJSON_GetObjectItemCaseSensitive(label, "meta");
+            if (meta && cJSON_IsString(meta) && meta->valuestring) 
+            {
+               m_PbmComment = meta->valuestring;
+            }
+            else 
+            {
+               m_PbmComment = "";
+            }
 
             // generate bitmap from label data
             auto bitmap = TextLabel::fromJson(label);

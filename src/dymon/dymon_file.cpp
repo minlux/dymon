@@ -11,6 +11,7 @@ namespace fs = std::filesystem;
 DymonFile::DymonFile(const char * const outDirectory) : Dymon(1, false)
 {
     counter = 0;
+    pbmComment = nullptr;
     this->outDirectory = std::string(outDirectory);
     // Check if directory exists, create if not
     if (!fs::exists(this->outDirectory)) {
@@ -23,7 +24,7 @@ DymonFile::DymonFile(const char * const outDirectory) : Dymon(1, false)
 
 bool DymonFile::connect(void * arg)
 {
-    (void)arg;
+    pbmComment = (std::string *)arg;
     return true;
 }
 
@@ -61,7 +62,11 @@ int DymonFile::send(const uint8_t * data, const size_t dataLen, bool more)
         width = (width << 8) | data[LABEL_WIDTH_OFFSET];
 
         // write header
-        outFile << "P4\n" << width << " " << height << "\n";
+        outFile << "P4\n";
+        if (pbmComment && !pbmComment->empty()) {
+            outFile << "# " << *pbmComment << "\n";
+        }
+        outFile << width << " " << height << "\n";
     }
     else if (dataLen >= 22) //this condition filters all command sequences leaf use with the bitmap data
     {

@@ -121,6 +121,7 @@ private:
 private:
    std::string outDirectory;
    std::ofstream outFile;
+   std::string * pbmComment;
    uint32_t counter;
 };
 
