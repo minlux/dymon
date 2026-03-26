@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install MinGW-w64
+        run: sudo apt-get install -y mingw-w64
+
+      - name: Configure (win64)
+        run: |
+          cmake -B build_win64 \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-linux-cross-toolchain.cmake \
+            -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic"
+
+      - name: Build (win64)
+        run: cmake --build build_win64 --parallel
+
+      - name: Create release archive
+        run: |
+          zip dymon-windows-x64.zip \
+            build_win64/dymon_pbm.exe \
+            build_win64/dymon_srv.exe \
+            build_win64/txt2pbm.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dymon-windows-x64.zip
+          generate_release_notes: true

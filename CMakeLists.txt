@@ -1,6 +1,14 @@
 cmake_minimum_required (VERSION 3.5)
-project(dymon)
+project(dymon VERSION 2.3.0)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=gnu++17 -static-libgcc -static-libstdc++")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+
+# derive version of the apps from the project version
+# thus, all will have the same version, and it is only defined in one place (the project definition)
+# this version shall be in sync with git tag
+add_compile_definitions(
+   APP_VERSION="${CMAKE_PROJECT_VERSION}"
+)
 
 include_directories(
    libs/cjson

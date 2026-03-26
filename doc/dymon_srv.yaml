@@ -51,6 +51,7 @@ paths:
                              "height": 252,
                              "orientation": 0,
                              "text": "Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux",
+                             "meta": "4194",
                              "count": 2
                            }'
                   ```
@@ -60,6 +61,7 @@ paths:
                   height: 252
                   orientation: 0
                   text: "Manuel Heiß\nminlux.de\n\\_\nhttps://github.com/minlux"
+                  meta: "4194"
                   count: 2
       responses:
         '200':
@@ -156,6 +158,14 @@ components:
           type: string
           description: Text to print on label; See README.md for supported markup
           example: "Manuel\nminlux.de\n\\_\nhttps://github.com/minlux"
+        meta:
+          type: string
+          description: |
+            Optional metadata string. When `dymon_srv` is started with a `--dir` output directory
+            (using `DymonFile`), this value is embedded as a comment in the generated PBM file.
+            Useful for tagging generated PBM files with an identifier (e.g. a record ID) for later
+            reference or processing.
+          example: "4194"
         count:
           type: integer
           description: Number of copies to print

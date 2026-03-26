@@ -20,7 +20,6 @@
 
 /* -- Defines ------------------------------------------------------------- */
 #define APP_NAME           "txt2pbm"
-#define APP_VERSION        "1.0.0"
 
 #define MAX_LINE_LENGTH    (120)
 

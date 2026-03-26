@@ -1,2 +1,0 @@
-Pre-build binaries for Windows can be downloaded here:
-https://minlux.de/download/dymon.zip
