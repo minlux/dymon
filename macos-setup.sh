@@ -104,6 +104,23 @@ ensure_cmake() {
   brew install cmake
 }
 
+build_dymon() {
+  log "Configuring and building dymon in ${BUILD_DIR}..."
+  cmake -B "${BUILD_DIR}" -S "${REPO_ROOT}"
+  cmake --build "${BUILD_DIR}" --parallel
+}
+
+make_test_pbm() {
+  local out="$1"
+  local txt2pbm="${BUILD_DIR}/txt2pbm"
+  if [[ ! -x "${txt2pbm}" ]]; then
+    err "txt2pbm not found at ${txt2pbm} (did the build succeed?)"
+    return 1
+  fi
+  log "Generating test label (${WIDTH}x${HEIGHT}) at ${out}..."
+  printf '%b\n' "${TEXT}" | "${txt2pbm}" -w "${WIDTH}" -h "${HEIGHT}" -o "${out}"
+}
+
 main() {
   parse_args "$@"
   log "Skeleton ready."
