@@ -27,8 +27,9 @@ HEIGHT=252; parse_args --height 50; check "parse --height sets HEIGHT" "50" "${H
 TEXT=""; parse_args --text "hi there"; check "parse --text sets TEXT" "hi there" "${TEXT}"
 MODEL=""; parse_args --model 450; check "parse --model sets MODEL" "450" "${MODEL}"
 
-# --- defaults are sane before any parsing override ---
-check "default WIDTH is 272" "272" "$(WIDTH=272; printf '%s' "${WIDTH}")"
+# --- defaults: read the real default from a freshly-sourced script ---
+check "default WIDTH is 272" "272" \
+  "$(bash -c "source '${SCRIPT_DIR}/macos-setup.sh'; printf '%s' \"\${WIDTH}\"")"
 
 # --- need_cmd ---
 if need_cmd ls; then check "need_cmd finds ls" "0" "0"; else check "need_cmd finds ls" "0" "1"; fi
