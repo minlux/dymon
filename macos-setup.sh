@@ -139,12 +139,20 @@ print_to_mock() {
   log "No --ip given: starting bundled mock printer on 127.0.0.1:${MOCK_PORT}..."
   python3 "${mock}" &
   local mock_pid=$!
-  trap 'kill "${mock_pid}" 2>/dev/null || true' RETURN
   sleep 1
 
   log "Printing to mock (build + PBM + protocol smoke test)..."
-  "${dymon_pbm}" --net 127.0.0.1 "$@" "${pbm}"
-  log "Mock print completed — toolchain works end to end."
+  local rc=0
+  "${dymon_pbm}" --net 127.0.0.1 "$@" "${pbm}" || rc=$?
+
+  # Always stop and reap the mock, whether the print succeeded or not.
+  kill "${mock_pid}" 2>/dev/null || true
+  wait "${mock_pid}" 2>/dev/null || true
+
+  if [[ "${rc}" -eq 0 ]]; then
+    log "Mock print completed — toolchain works end to end."
+  fi
+  return "${rc}"
 }
 
 print_label() {
