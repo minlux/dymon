@@ -121,9 +121,67 @@ make_test_pbm() {
   printf '%b\n' "${TEXT}" | "${txt2pbm}" -w "${WIDTH}" -h "${HEIGHT}" -o "${out}"
 }
 
+print_to_mock() {
+  local pbm="$1"; shift
+  local dymon_pbm="$1"; shift
+  # remaining args ("$@") are optional model args
+  local mock="${REPO_ROOT}/dymo_wireless_mock.py"
+
+  if ! need_cmd python3; then
+    err "python3 is required for the mock smoke test. Install it or pass --ip."
+    return 1
+  fi
+  if [[ ! -f "${mock}" ]]; then
+    err "mock not found at ${mock}"
+    return 1
+  fi
+
+  log "No --ip given: starting bundled mock printer on 127.0.0.1:${MOCK_PORT}..."
+  python3 "${mock}" &
+  local mock_pid=$!
+  trap 'kill "${mock_pid}" 2>/dev/null || true' RETURN
+  sleep 1
+
+  log "Printing to mock (build + PBM + protocol smoke test)..."
+  "${dymon_pbm}" --net 127.0.0.1 "$@" "${pbm}"
+  log "Mock print completed — toolchain works end to end."
+}
+
+print_label() {
+  local pbm="$1"
+  local dymon_pbm="${BUILD_DIR}/dymon_pbm"
+  if [[ ! -x "${dymon_pbm}" ]]; then
+    err "dymon_pbm not found at ${dymon_pbm} (did the build succeed?)"
+    return 1
+  fi
+
+  # Build optional model args as an array; expand bash-3.2-safely below.
+  local model_args=()
+  if [[ -n "${MODEL}" ]]; then
+    model_args=(--model "${MODEL}")
+  fi
+
+  local target
+  target="$(select_print_target "${IP}")"
+  if [[ "${target}" == net* ]]; then
+    log "Printing to network printer ${IP}..."
+    "${dymon_pbm}" --net "${IP}" ${model_args[@]+"${model_args[@]}"} "${pbm}"
+    log "Print job sent to ${IP}."
+  else
+    print_to_mock "${pbm}" "${dymon_pbm}" ${model_args[@]+"${model_args[@]}"}
+  fi
+}
+
 main() {
   parse_args "$@"
-  log "Skeleton ready."
+  ensure_xcode_clt
+  ensure_homebrew
+  ensure_cmake
+  build_dymon
+  local pbm="${BUILD_DIR}/macos-test.pbm"
+  make_test_pbm "${pbm}"
+  print_label "${pbm}"
+  log "Done."
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
