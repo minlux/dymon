@@ -1,7 +1,14 @@
 cmake_minimum_required (VERSION 3.5)
 project(dymon VERSION 2.3.0)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=gnu++17 -static-libgcc -static-libstdc++")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=gnu++17")
+# -static-libgcc/-static-libstdc++ and the '-s' strip flag are GCC/MinGW
+# options that Apple Clang does not support (the static flags are a hard link
+# error on macOS). Only apply them off-Apple, so Linux/Windows builds are
+# unchanged.
+if(NOT APPLE)
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
+   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s")
+endif()
 
 # derive version of the apps from the project version
 # thus, all will have the same version, and it is only defined in one place (the project definition)
