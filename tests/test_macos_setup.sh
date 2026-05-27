@@ -35,4 +35,9 @@ check "default WIDTH is 272" "272" \
 if need_cmd ls; then check "need_cmd finds ls" "0" "0"; else check "need_cmd finds ls" "0" "1"; fi
 need_cmd __definitely_not_a_real_cmd__; check "need_cmd missing -> nonzero" "1" "$?"
 
+# --- select_print_target ---
+check "target with IP -> net <ip>" "net 1.2.3.4" "$(select_print_target 1.2.3.4)"
+check "target empty -> mock" "mock" "$(select_print_target "")"
+check "target no arg -> mock" "mock" "$(select_print_target)"
+
 exit "${fail}"

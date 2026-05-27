@@ -56,6 +56,15 @@ parse_args() {
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+# Echo the chosen print target: "net <ip>" when an IP is set, else "mock".
+select_print_target() {
+  if [[ -n "${1:-}" ]]; then
+    printf 'net %s\n' "$1"
+  else
+    printf 'mock\n'
+  fi
+}
+
 main() {
   parse_args "$@"
   log "Skeleton ready."
