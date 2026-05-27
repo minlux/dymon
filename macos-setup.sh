@@ -65,6 +65,45 @@ select_print_target() {
   fi
 }
 
+ensure_xcode_clt() {
+  if xcode-select -p >/dev/null 2>&1; then
+    log "Xcode Command Line Tools already installed."
+    return 0
+  fi
+  log "Installing Xcode Command Line Tools (a GUI prompt may appear)..."
+  xcode-select --install || true
+  log "Waiting for Xcode Command Line Tools to finish installing..."
+  until xcode-select -p >/dev/null 2>&1; do
+    sleep 5
+  done
+  log "Xcode Command Line Tools installed."
+}
+
+ensure_homebrew() {
+  if need_cmd brew; then
+    log "Homebrew already installed."
+  else
+    log "Installing Homebrew..."
+    NONINTERACTIVE=1 /bin/bash -c \
+      "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+  # Put brew on PATH for this session (Apple Silicon vs Intel locations).
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+}
+
+ensure_cmake() {
+  if need_cmd cmake; then
+    log "cmake already installed."
+    return 0
+  fi
+  log "Installing cmake..."
+  brew install cmake
+}
+
 main() {
   parse_args "$@"
   log "Skeleton ready."
