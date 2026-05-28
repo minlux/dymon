@@ -14,6 +14,13 @@
 #define _CONNECT_TIMEOUT_1SEC    (5)      //seconds connect timeout
 #define _SEND_RECV_TIMEOUT_1S    (5)   //milli seconds send/receive timeout
 
+// MSG_MORE (Linux) coalesces successive sends like TCP_CORK. macOS has no
+// equivalent send() flag; falling back to 0 sends immediately, which is fine
+// since the receiver reassembles the TCP stream regardless.
+#ifndef MSG_MORE
+#define MSG_MORE 0
+#endif
+
 
 
 bool DymonNet::connect(void * arg)
