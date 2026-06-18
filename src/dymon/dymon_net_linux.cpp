@@ -5,7 +5,6 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <netdb.h>
 #include <fcntl.h>
 #include "cJSON.h"
 #include "dymon.h"
@@ -44,12 +43,20 @@ bool DymonNet::connect(void * arg)
    int flags = fcntl(sock, F_GETFL, 0);
    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
-   //start connecting to host
-   struct sockaddr_in address;  /* the libc network address data structure */
-   uint32_t addr = inet_addr(printerIp); //convert string representation of IP address (decimals and dots) to binary
-   address.sin_addr.s_addr = addr; /* assign the address */
-   address.sin_port = htons(port);            /* translate int2port num */
-   address.sin_family = AF_INET;
+   //resolve hostname or IP address
+   struct addrinfo hints = {};
+   hints.ai_family = AF_INET;
+   hints.ai_socktype = SOCK_STREAM;
+   hints.ai_protocol = IPPROTO_TCP;
+   struct addrinfo * res = nullptr;
+   if (getaddrinfo(printerIp, nullptr, &hints, &res) != 0 || res == nullptr)
+   {
+      ::close(sock);
+      return false;
+   }
+   struct sockaddr_in address = *reinterpret_cast<struct sockaddr_in *>(res->ai_addr);
+   freeaddrinfo(res);
+   address.sin_port = htons(port);
    ::connect(sock, (struct sockaddr *)&address, sizeof(address));
 
    //go back to blocking mode
