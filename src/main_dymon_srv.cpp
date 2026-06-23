@@ -10,10 +10,9 @@
 #include <string.h>
 #include <string>
 #include <iostream>
-#include <thread>
+#include <mutex>
 #include "httplib.h"
 #include "base64.h"
-#include "msg_queue.h"
 #include "text_label.h"
 #include "usbprint.h"
 #include "argtable3.h"
@@ -52,32 +51,20 @@ private:
 };
 
 
-struct Pbm {
-   Pbm() { copies = 0; };
-   Pbm(std::string ip, uint32_t copies, const uint8_t * data, uint32_t length) 
-      : ip(ip), copies(copies), data(std::vector<uint8_t>(data, data + length)) {}
-   std::string ip;
-   uint32_t copies;
-   std::vector<uint8_t> data;
-}; 
-
 /* -- Module Global Function Prototypes ----------------------------------- */
 static void m_on_options(const Request &req, Response &res);
 static void m_on_get_wpm(const Request &req, Response &res);
 static void m_on_get_labels(const Request &req, Response &res);
 static void m_on_post_labels(const Request &req, Response &res);
 static void m_on_post_pbm(const Request &req, Response &res);
-static void m_print_labels_thread();
 static void m_print_labels(cJSON *labels);
-static void m_print_pbms_thread();
 
 /* -- (Module) Global Variables ------------------------------------------- */
 extern const unsigned char __wpm_receiver_html[];
 extern const unsigned int __wpm_receiver_html_len;
 extern const unsigned char __labelwriter_index_html[];
 extern const unsigned int __labelwriter_index_html_len;
-static MessageQueue<cJSON *, 64> m_LabelQueue;
-static MessageQueue<Pbm, 64> m_PbmQueue;
+static std::mutex m_PrinterMutex;
 static DymonPrinter *m_Printer;
 static std::string m_PbmComment;
 
@@ -161,8 +148,6 @@ int main(int argc, char *argv[])
       return -1;
    }
 
-   thread printLabelsThread(&m_print_labels_thread);
-   thread printPbmsThread(&m_print_pbms_thread);
    Server svr;
 
    // get interfaze and path
@@ -283,21 +268,19 @@ static void m_on_options(const Request &req, Response &res)
 */
 static void m_on_post_labels(const Request &req, Response &res)
 {
-   // request body is expected to contain json array of objects
-   const char *requestBody = req.body.c_str();
-   cJSON *const labels = cJSON_Parse(requestBody);
+   cJSON *const labels = cJSON_Parse(req.body.c_str());
    if (labels != NULL)
    {
-      // push the "print labels request" into the queue - a "m_print_thread" will pop the label out of the queue and process it!
-      m_LabelQueue.push_nowait(labels); // the actual printing of the label is done in function m_print_labels!!!
+      std::lock_guard<std::mutex> lock(m_PrinterMutex);
+      m_print_labels(labels);
+      cJSON_Delete(labels);
    }
 
-   // set response
    res.set_header("Access-Control-Allow-Origin", "*");
    res.set_header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept, Origin, Authorization");
    res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
    res.set_content("{\"status\":\"OK\"}", "application/json");
-   res.status = 200; // HTTP status code
+   res.status = 200;
 }
 
 static inline bool starts_with_p4_header(const uint8_t *data)
@@ -332,8 +315,7 @@ static inline bool starts_with_p4_header(const uint8_t *data)
 */
 static void m_on_post_pbm(const Request &req, Response &res)
 {
-   // Get query parameters (req.params is a std::multimap<std::string, std::string>)
-   // IP
+   // Get query parameters
    std::string ip = std::string("0.0.0.0");
    auto it = req.params.find("ip");
    if (it != req.params.end()) {
@@ -346,12 +328,12 @@ static void m_on_post_pbm(const Request &req, Response &res)
       if (cpys > 1) copies = (uint32_t)cpys;
    }
 
-   // Body data can be either binary PBM P4 data (of one single image)
-   //  or base64 data (of one or more PBM P4 images, seperated by \n)
+   // Collect all valid PBMs from request body (binary or newline-separated base64)
+   std::vector<std::vector<uint8_t>> pbms;
    const uint8_t *body = (const uint8_t *)req.body.data();
    if ((req.body.size() >= 8) && starts_with_p4_header(body))
    {
-      m_PbmQueue.push_nowait(Pbm(ip, copies, body, req.body.size()));
+      pbms.emplace_back(body, body + req.body.size());
    }
    else
    {
@@ -359,48 +341,39 @@ static void m_on_post_pbm(const Request &req, Response &res)
       size_t start = 0;
       while (true)
       {
-         // Find next newline
          size_t pos = req.body.find('\n', start);
          if (pos == std::string::npos)
          {
             const uint32_t cnt = base64_decode(pbm.data(), &req.body[start], req.body.size() - start);
             if ((cnt >= 8) && starts_with_p4_header(pbm.data()))
-            {
-               m_PbmQueue.push_nowait(Pbm(ip, copies, pbm.data(), cnt));
-            }
+               pbms.emplace_back(pbm.data(), pbm.data() + cnt);
             break;
          }
          const uint32_t cnt = base64_decode(pbm.data(), &req.body[start], pos - start);
          if ((cnt >= 8) && starts_with_p4_header(pbm.data()))
-         {
-            m_PbmQueue.push_nowait(Pbm(ip, copies, pbm.data(), cnt));
-         }
-         // Move past the newline
+            pbms.emplace_back(pbm.data(), pbm.data() + cnt);
          start = pos + 1;
       }
    }
 
-   // Set response
+   if (!pbms.empty())
+   {
+      std::lock_guard<std::mutex> lock(m_PrinterMutex);
+      if (m_Printer->start(ip.c_str()) == 0)
+      {
+         for (size_t i = 0; i < pbms.size(); ++i)
+         {
+            auto bitmap = Dymon::Bitmap::fromBytes(pbms[i]);
+            m_Printer->print(&bitmap, copies, (i + 1 < pbms.size()));
+         }
+         m_Printer->end();
+      }
+   }
+
    res.set_header("Access-Control-Allow-Origin", "*");
    res.set_header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept, Origin, Authorization");
    res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-   // res.set_content("{\"status\":\"OK\"}", "application/json");
-   res.status = 200; // HTTP status code
-}
-
-static void m_print_labels_thread()
-{
-   cJSON *labels;
-
-   while (true)
-   {
-      // get next print request out of the queue. wait until one become available
-      m_LabelQueue.pop(labels);
-      // print the labels
-      m_print_labels(labels);
-      // cleanup JSON
-      cJSON_Delete(labels);
-   }
+   res.status = 200;
 }
 
 //labels can be either an array of labels, or one single label
@@ -409,7 +382,7 @@ static void m_print_labels(cJSON *labels)
    // start label printing
    const bool isArray = cJSON_IsArray(labels);
    cJSON * const first = isArray ? labels->child : labels;
-   if (first) // deal with empty array
+   if (first && cJSON_GetObjectItemCaseSensitive(first, "text")) // deal with empty array or missing "text" field objects
    {
       cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
       const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
@@ -448,21 +421,3 @@ static void m_print_labels(cJSON *labels)
 }
 
 
-static void m_print_pbms_thread()
-{
-   Pbm pbm;
-   while (true)
-   {
-      // get next print request out of the queue. wait until one become available
-      m_PbmQueue.pop(pbm);
-      if (m_Printer->start(pbm.ip.c_str()) == 0)
-      {
-         do
-         {
-            auto bitmap = Dymon::Bitmap::fromBytes(pbm.data);
-            m_Printer->print(&bitmap, pbm.copies, (m_PbmQueue.count() != 0));
-         } while (m_PbmQueue.pop_nowait(pbm));
-         m_Printer->end(); // finalize printing (form-feed) and close socket
-      }
-   }
-}
