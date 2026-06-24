@@ -32,8 +32,17 @@ jobs:
             build_win64/dymon_srv.exe \
             build_win64/txt2pbm.exe
 
+      - name: Extract tag annotation
+        id: tag_body
+        run: |
+          {
+            echo 'body<<EOF'
+            git tag -l --format='%(contents)' ${{ github.ref_name }}
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: dymon-windows-x64.zip
-          generate_release_notes: true
+          body: ${{ steps.tag_body.outputs.body }}
