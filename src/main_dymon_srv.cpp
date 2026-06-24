@@ -36,9 +36,9 @@ public:
       return _dymon->ping(device ? (void *)device : (void *)ipAddress);
    }
 
-   inline int start(const char *ipAddress) 
-   { 
-      return _dymon->start(device ? (void *)device : (void *)ipAddress); 
+   inline int start(const char *ipAddress)
+   {
+      return _dymon->start(device ? (void *)device : (void *)ipAddress);
    }
 
    inline int print(Dymon::Bitmap *bitmap, uint32_t copies = 1, bool more = false)
@@ -54,9 +54,9 @@ public:
       return 0;
    }
 
-   inline void end(void) 
-   { 
-      _dymon->end(); 
+   inline void end(void)
+   {
+      _dymon->end();
    }
 
 private:
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
    svr.Post("/labels", &m_on_post_labels);
    svr.Get("/pbm", &m_on_get_wpm);
    svr.Post("/pbm", &m_on_post_pbm);
-   
+
    // Add a handler for *all* OPTION requests, that replies, so that CORS is possible
    svr.Options(R"(.*)", &m_on_options);
 
@@ -293,7 +293,7 @@ static void m_on_post_labels(const Request &req, Response &res)
       {
          // test request: ping printer to check reachability
          cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip");
-         const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
+         const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : nullptr;
          status = m_Printer->ping(ipAddress) ? 200 : 503;
       }
       else
@@ -441,7 +441,7 @@ static int m_print_labels(cJSON *labels)
    if (first) // deal with empty array
    {
       cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
-      const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
+      const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : nullptr;
       if (m_Printer->start(ipAddress) != 0) // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
       {
          return 503;
