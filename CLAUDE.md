@@ -110,11 +110,15 @@ Single-line braceless bodies are not allowed, even for trivial cases.
 
 ```bash
 git tag -a vx.y.z -m "$(cat <<'EOF'
-Release Vx.y.z
+## Vx.y.z
 
-## What's new
+### Feature or fix title
 
-...agreed release notes here...
+Description of what changed and why.
+
+### Another title
+
+Description.
 EOF
 )"
 git push origin vx.y.z
