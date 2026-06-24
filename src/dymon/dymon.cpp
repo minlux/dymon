@@ -22,6 +22,13 @@ static void log_status(int i, const uint8_t * status, uint32_t count)
 }
 
 
+bool Dymon::ping(void * arg)
+{
+   bool ok = this->connect(arg);
+   if (ok) this->close();
+   return ok;
+}
+
 
 int Dymon::start(void * arg)
 {
@@ -228,9 +235,3 @@ void Dymon::end()
       connected = false;
    }
 }
-
-
-
-
-
-

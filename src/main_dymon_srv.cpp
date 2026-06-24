@@ -31,19 +31,33 @@ public:
    DymonPrinter(Dymon *dymon, const char *device) : _dymon(dymon), device(device) {}
    // inline Dymon &dymon() { return *_dymon; }
 
-   inline int start(const char *ipAddress) { return _dymon->start(device ? (void *)device : (void *)ipAddress); }
+   inline bool ping(const char *ipAddress)
+   {
+      return _dymon->ping(device ? (void *)device : (void *)ipAddress);
+   }
+
+   inline int start(const char *ipAddress) 
+   { 
+      return _dymon->start(device ? (void *)device : (void *)ipAddress); 
+   }
 
    inline int print(Dymon::Bitmap *bitmap, uint32_t copies = 1, bool more = false)
    {
       for (int i = 0; i < copies; ++i)
       {
          int err = _dymon->print(bitmap, 0, ((i + 1) < copies) || more);
-         if (err != 0) return err;
+         if (err != 0)
+         {
+            return err;
+         }
       }
       return 0;
    }
 
-   inline void end(void) { _dymon->end(); }
+   inline void end(void) 
+   { 
+      _dymon->end(); 
+   }
 
 private:
    Dymon *_dymon;
@@ -57,7 +71,7 @@ static void m_on_get_wpm(const Request &req, Response &res);
 static void m_on_get_labels(const Request &req, Response &res);
 static void m_on_post_labels(const Request &req, Response &res);
 static void m_on_post_pbm(const Request &req, Response &res);
-static void m_print_labels(cJSON *labels);
+static int m_print_labels(cJSON *labels);
 
 /* -- (Module) Global Variables ------------------------------------------- */
 extern const unsigned char __wpm_receiver_html[];
@@ -268,19 +282,35 @@ static void m_on_options(const Request &req, Response &res)
 */
 static void m_on_post_labels(const Request &req, Response &res)
 {
+   int status = 200;
    cJSON *const labels = cJSON_Parse(req.body.c_str());
    if (labels != NULL)
    {
+      const bool isArray = cJSON_IsArray(labels);
+      cJSON * const first = isArray ? labels->child : labels;
       std::lock_guard<std::mutex> lock(m_PrinterMutex);
-      m_print_labels(labels);
+      if (first && !cJSON_GetObjectItemCaseSensitive(first, "text"))
+      {
+         // test request: ping printer to check reachability
+         cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip");
+         const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
+         status = m_Printer->ping(ipAddress) ? 200 : 503;
+      }
+      else
+      {
+         status = m_print_labels(labels);
+      }
       cJSON_Delete(labels);
    }
 
    res.set_header("Access-Control-Allow-Origin", "*");
    res.set_header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept, Origin, Authorization");
    res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-   res.set_content("{\"status\":\"OK\"}", "application/json");
-   res.status = 200;
+   res.set_content(status == 200 ? "{\"status\":\"OK\"}" :
+                   status == 503 ? "{\"status\":\"Service Unavailable\"}" :
+                                   "{\"status\":\"Internal Server Error\"}",
+                   "application/json");
+   res.status = status;
 }
 
 static inline bool starts_with_p4_header(const uint8_t *data)
@@ -318,14 +348,19 @@ static void m_on_post_pbm(const Request &req, Response &res)
    // Get query parameters
    std::string ip = std::string("0.0.0.0");
    auto it = req.params.find("ip");
-   if (it != req.params.end()) {
+   if (it != req.params.end())
+   {
       ip = it->second;
    }
    uint32_t copies = 1;
    it = req.params.find("copies");
-   if (it != req.params.end()) {
+   if (it != req.params.end())
+   {
       int cpys = std::stoi(it->second);
-      if (cpys > 1) copies = (uint32_t)cpys;
+      if (cpys > 1)
+      {
+         copies = (uint32_t)cpys;
+      }
    }
 
    // Collect all valid PBMs from request body (binary or newline-separated base64)
@@ -346,78 +381,95 @@ static void m_on_post_pbm(const Request &req, Response &res)
          {
             const uint32_t cnt = base64_decode(pbm.data(), &req.body[start], req.body.size() - start);
             if ((cnt >= 8) && starts_with_p4_header(pbm.data()))
+            {
                pbms.emplace_back(pbm.data(), pbm.data() + cnt);
+            }
             break;
          }
          const uint32_t cnt = base64_decode(pbm.data(), &req.body[start], pos - start);
          if ((cnt >= 8) && starts_with_p4_header(pbm.data()))
+         {
             pbms.emplace_back(pbm.data(), pbm.data() + cnt);
+         }
          start = pos + 1;
       }
    }
 
-   if (!pbms.empty())
+   int status = 200;
+   std::lock_guard<std::mutex> lock(m_PrinterMutex);
+   if (pbms.empty())
    {
-      std::lock_guard<std::mutex> lock(m_PrinterMutex);
-      if (m_Printer->start(ip.c_str()) == 0)
+      // test request: ping printer to check reachability
+      status = m_Printer->ping(ip.c_str()) ? 200 : 503;
+   }
+   else
+   {
+      if (m_Printer->start(ip.c_str()) != 0)
+      {
+         status = 503;
+      }
+      else
       {
          for (size_t i = 0; i < pbms.size(); ++i)
          {
             auto bitmap = Dymon::Bitmap::fromBytes(pbms[i]);
-            m_Printer->print(&bitmap, copies, (i + 1 < pbms.size()));
+            if (m_Printer->print(&bitmap, copies, (i + 1 < pbms.size())) != 0)
+            {
+               m_Printer->end();
+               status = 500;
+               break;
+            }
          }
-         m_Printer->end();
+         if (status == 200)
+         {
+            m_Printer->end();
+         }
       }
    }
 
    res.set_header("Access-Control-Allow-Origin", "*");
    res.set_header("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Accept, Origin, Authorization");
    res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-   res.status = 200;
+   res.status = status;
 }
 
 //labels can be either an array of labels, or one single label
-static void m_print_labels(cJSON *labels)
+static int m_print_labels(cJSON *labels)
 {
-   // start label printing
    const bool isArray = cJSON_IsArray(labels);
    cJSON * const first = isArray ? labels->child : labels;
-   if (first && cJSON_GetObjectItemCaseSensitive(first, "text")) // deal with empty array or missing "text" field objects
+   if (first) // deal with empty array
    {
       cJSON * const ip = cJSON_GetObjectItemCaseSensitive(first, "ip"); // get IP
       const char * ipAddress = (cJSON_IsString(ip) && ip->valuestring) ? ip->valuestring : "0.0.0.0";
-      int err = m_Printer->start(ipAddress); // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
-      if (err == 0)
+      if (m_Printer->start(ipAddress) != 0) // IP is only used for network labelwriter, and only if IP isn't forced to a specific address given by command line argument '--net'
       {
-         cJSON * label;
-         cJSON * next;
-         for(label = first; label != NULL; label = next)
+         return 503;
+      }
+      cJSON * label;
+      cJSON * next;
+      for (label = first; label != NULL; label = next)
+      {
+         next = isArray ? label->next : nullptr;
+         //get number of copies to be printed
+         cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
+         const uint32_t copies = count ? count->valueint : 1;
+
+         // get meta information
+         // DymonFile stores this information into the comment of the generated pbm file
+         cJSON * const meta = cJSON_GetObjectItemCaseSensitive(label, "meta");
+         m_PbmComment = (meta && cJSON_IsString(meta) && meta->valuestring) ? meta->valuestring : "";
+
+         // generate bitmap from label data
+         auto bitmap = TextLabel::fromJson(label);
+         if (m_Printer->print(&bitmap, copies, (next != nullptr)) != 0)
          {
-            next = isArray ? label->next : nullptr;
-            //get number of copies to be printed
-            cJSON * const count = cJSON_GetObjectItemCaseSensitive(label, "count");
-            const uint32_t copies = count ? count->valueint : 1;
-
-            // get meta information
-            // DymonFile stores this information into the comment of the generated pbm file
-            cJSON * const meta = cJSON_GetObjectItemCaseSensitive(label, "meta");
-            if (meta && cJSON_IsString(meta) && meta->valuestring) 
-            {
-               m_PbmComment = meta->valuestring;
-            }
-            else 
-            {
-               m_PbmComment = "";
-            }
-
-            // generate bitmap from label data
-            auto bitmap = TextLabel::fromJson(label);
-            m_Printer->print(&bitmap, copies, (next != nullptr));
+            m_Printer->end();
+            return 500;
          }
       }
       // finalize printing process (make form-feed and close TCP connection to LabelWriter)
       m_Printer->end();
    }
+   return 200;
 }
-
-

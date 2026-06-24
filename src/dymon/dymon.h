@@ -41,6 +41,7 @@ public:
 
 public:
    Dymon(uint32_t session, bool lw450) : connected(false), lw450flavor(lw450), session(session), index(0) { }
+   bool ping(void * arg); //check if device is reachable: connect + disconnect, returns true on success
    int start(void * arg); //start calls connect. For DymonNet, arg ist expected to be a ip address (e.g. "192.168.178.21"); For DymonUsb, arg is expected to be the path to the device to be opened
    int read_status(uint8_t mode); //request a status update (mode: 0 ^= passive, 1 ^= active)
    int print(const Bitmap * bitmap, double labelLength1mm, int more); //print Label (can be called several times to print multiple labels)
