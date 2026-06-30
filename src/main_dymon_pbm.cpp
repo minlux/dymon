@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
       argHelp = arg_lit0(NULL, "help", "Print help and exit"),
       argVersion = arg_lit0(NULL, "version", "Print version and exit"),
    #ifdef _WIN32
-      argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922')"),
+      argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922'), or 'discover' to list USB printers"),
    #else
       argUsb = arg_str0(NULL, "usb", "<DEVICE>", "Use USB printer device (e.g. '/dev/usb/lp1')"),
    #endif
@@ -97,6 +97,15 @@ int main(int argc, char * argv[])
       puts(APP_VERSION);
       return 0;
    }
+
+#ifdef _WIN32
+   // Discover USB printers
+   if (argUsb->count && strcmp(argUsb->sval[0], "discover") == 0)
+   {
+      usbprint_discover();
+      return 0;
+   }
+#endif
 
    // Check existance of one (and only one) of the supported interfaces
    if (argUsb->count && argNet->count)

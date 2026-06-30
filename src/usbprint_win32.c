@@ -5,73 +5,157 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <wtypesbase.h> //this comes mingw64 and is required to define LPVOID etc.
-#include <winreg.h>
+#include <string.h>
+#include <windows.h>
 #include <setupapi.h>
-#include <devguid.h>
 
-/* This define is required so that the GUID_DEVINTERFACE_USBPRINT variable is
- * declared an initialised as a static locally, since windows does not include it in any
- * of its libraries
- */
-#define SS_DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
-   static const GUID name = {l, w1, w2, {b1, b2, b3, b4, b5, b6, b7, b8}}
+static const GUID GUID_DEVINTERFACE_USBPRINT = {
+   0x28d78fad, 0x5a12, 0x11D1,
+   { 0xae, 0x5b, 0x00, 0x00, 0xf8, 0x03, 0xa8, 0xc2 }
+};
 
-SS_DEFINE_GUID(GUID_DEVINTERFACE_USBPRINT, 0x28d78fad, 0x5a12, 0x11D1, 0xae, 0x5b, 0x00, 0x00, 0xf8, 0x03, 0xa8, 0xc2); // according to peters blog, this is a microsoft magic number to identify usb printers
+typedef struct {
+   char *path;      /* heap-allocated device path, caller must free */
+   char  name[256]; /* friendly name from registry, or "" */
+} UsbPrinterInfo;
+
+/* Fills info for the device at index. Returns 1 on success, 0 if no more devices. */
+static int get_printer_info(HDEVINFO devs, DWORD index, UsbPrinterInfo *info)
+{
+   SP_DEVICE_INTERFACE_DATA iface;
+   iface.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
+   if (!SetupDiEnumDeviceInterfaces(devs, NULL, &GUID_DEVINTERFACE_USBPRINT, index, &iface))
+   {
+      return 0;
+   }
+
+   DWORD size = 0;
+   SetupDiGetDeviceInterfaceDetailA(devs, &iface, NULL, 0, &size, NULL);
+
+   SP_DEVICE_INTERFACE_DETAIL_DATA_A *detail =
+      (SP_DEVICE_INTERFACE_DETAIL_DATA_A *)malloc(size);
+   if (!detail)
+   {
+      return 0;
+   }
+   detail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_A);
+
+   SP_DEVINFO_DATA devinfo;
+   devinfo.cbSize = sizeof(SP_DEVINFO_DATA);
+   if (!SetupDiGetDeviceInterfaceDetailA(devs, &iface, detail, size, NULL, &devinfo))
+   {
+      free(detail);
+      return 0;
+   }
+
+   info->path = _strdup(detail->DevicePath);
+   free(detail);
+
+   info->name[0] = '\0';
+   SetupDiGetDeviceRegistryPropertyA(devs, &devinfo,
+      SPDRP_FRIENDLYNAME, NULL, (PBYTE)info->name, (DWORD)sizeof(info->name) - 1, NULL);
+
+   return 1;
+}
 
 
-//get the obscure device-name, windows assigns to an usb device (something like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}")
-//returns
-//0 on success
-//-1, -2 in case of API errors
-//-3 none of the devices matches the given device-identifer
+void usbprint_discover(void)
+{
+   HDEVINFO devs = SetupDiGetClassDevsA(
+      &GUID_DEVINTERFACE_USBPRINT, NULL, NULL,
+      DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+   if (devs == INVALID_HANDLE_VALUE)
+   {
+      fprintf(stderr, "SetupDiGetClassDevs failed (error %lu)\n", GetLastError());
+      return;
+   }
+
+   printf("USB printers (usbprint.sys):\n\n");
+   int found = 0;
+   for (DWORD i = 0; ; i++)
+   {
+      UsbPrinterInfo info = { 0 };
+      if (!get_printer_info(devs, i, &info))
+      {
+         break;
+      }
+
+      char vid[32] = { 0 };
+      const char *vid_start = strstr(info.path, "vid_");
+      if (vid_start)
+      {
+         const char *vid_end = strchr(vid_start, '&');
+         if (!vid_end)
+         {
+            vid_end = strchr(vid_start, '#');
+         }
+         if (vid_end)
+         {
+            size_t len = (size_t)(vid_end - vid_start);
+            if (len < sizeof(vid))
+            {
+               memcpy(vid, vid_start, len);
+               vid[len] = '\0';
+            }
+         }
+      }
+
+      printf("  Name : %s\n", info.name[0] ? info.name : "(unknown)");
+      printf("  Path : %s\n", info.path);
+      if (vid[0])
+      {
+         printf("  Use  : --usb %s\n", vid);
+      }
+      printf("\n");
+
+      free(info.path);
+      found++;
+   }
+
+   if (found == 0)
+   {
+      printf("  (none found - is the printer plugged in and powered on?)\n\n");
+   }
+
+   SetupDiDestroyDeviceInfoList(devs);
+}
+
+
+// Get the obscure device-name Windows assigns to a USB device (e.g. "\\?\usb#vid_0922&pid_0028#...#{28d78fad-...}")
+// Returns 0 on success, -1 on API error, -3 if no device matches deviceIdentifier.
 int usbprint_get_devicename(char buffer[], unsigned int bufsize, const char *deviceIdentifier)
 {
-   buffer[0] = 0; //preset
+   buffer[0] = '\0';
 
-   // get handle to a device information set that contains requested device information elements
-   HDEVINFO devs = SetupDiGetClassDevs(&GUID_DEVINTERFACE_USBPRINT, 0, 0, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+   HDEVINFO devs = SetupDiGetClassDevsA(
+      &GUID_DEVINTERFACE_USBPRINT, NULL, NULL,
+      DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
    if (devs == INVALID_HANDLE_VALUE)
    {
       return -1;
    }
 
-   int error = -2; //preset
-   //enumerates the device interfaces that are contained in a device information set
-   DWORD devcount = 0;
-   SP_DEVICE_INTERFACE_DATA devinterface;
-   devinterface.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
-   while (SetupDiEnumDeviceInterfaces(devs, 0, &GUID_DEVINTERFACE_USBPRINT, devcount++, &devinterface))
+   int result = -3;
+   for (DWORD i = 0; ; i++)
    {
-      // get details about th device interface
-      DWORD size = 0;
-      SetupDiGetDeviceInterfaceDetail(devs, &devinterface, 0, 0, &size, 0); //first i just query the size of the details
+      UsbPrinterInfo info = { 0 };
+      if (!get_printer_info(devs, i, &info))
       {
-         PSP_DEVICE_INTERFACE_DETAIL_DATA interface_detail;
-         interface_detail = calloc(1, size); //allocate memory for the details
-         if (interface_detail)
-         {
-            SP_DEVINFO_DATA devinfo;
-            devinfo.cbSize = sizeof(SP_DEVINFO_DATA);
-            interface_detail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
-            if (SetupDiGetDeviceInterfaceDetail(devs, &devinterface, interface_detail, size, 0, &devinfo))
-            {
-               error = -3; //preset
-               // puts(interface_detail->DevicePath); //test only; something like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}" expected
-
-               //now check if the interface path matches my identifyer
-               if (strstr(interface_detail->DevicePath, deviceIdentifier))
-               {
-                  strncpy(buffer, interface_detail->DevicePath, bufsize);
-                  buffer[bufsize - 1] = 0; //ensure zero termination
-                  free(interface_detail);
-                  return 0;
-               }
-            }
-            free(interface_detail);
-         }
+         break;
       }
-   }
-   return error;
-}
 
+      if (strstr(info.path, deviceIdentifier))
+      {
+         strncpy(buffer, info.path, bufsize);
+         buffer[bufsize - 1] = '\0';
+         free(info.path);
+         result = 0;
+         break;
+      }
+
+      free(info.path);
+   }
+
+   SetupDiDestroyDeviceInfoList(devs);
+   return result;
+}

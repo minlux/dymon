@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
            argHelp = arg_lit0(NULL, "help", "Print help and exit"),
            argVersion = arg_lit0(NULL, "version", "Print version and exit"),
 #ifdef _WIN32
-           argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922')"),
+           argUsb = arg_str0(NULL, "usb", "<ID>", "Use USB printer with vid/pid ID (e.g. 'vid_0922'), or 'discover' to list USB printers"),
 #else
            argUsb = arg_str0(NULL, "usb", "<DEVICE>", "Use USB printer device (e.g. '/dev/usb/lp1')"),
 #endif
@@ -147,6 +147,15 @@ int main(int argc, char *argv[])
       puts(APP_VERSION);
       return 0;
    }
+
+#ifdef _WIN32
+   // Discover USB printers
+   if (argUsb->count && strcmp(argUsb->sval[0], "discover") == 0)
+   {
+      usbprint_discover();
+      return 0;
+   }
+#endif
 
    // Check for debug switch
    if (argDebug->count)
@@ -179,7 +188,7 @@ int main(int argc, char *argv[])
       // get the device name, to be used on windows
       //
       static char devname[256];
-      int err = usbprint_get_devicename(devname, sizeof(devname), &argv[1][4]); // input something like "vid_0922" and get device name like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}"
+      int err = usbprint_get_devicename(devname, sizeof(devname), dev); // input something like "vid_0922" and get device name like "\\?\usb#vid_0922&pid_0028#04133046018600#{28d78fad-5a12-11d1-ae5b-0000f803a8c2}"
       if (err != 0)
       {
          cout << "Can't find any USB connected DYMO" << endl;
