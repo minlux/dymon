@@ -14,17 +14,38 @@ There are no third-party C/C++ dependencies to install: all libs are vendored un
 
 ## Build
 
-CMake project (`CMakeLists.txt`, version is the single source of truth via `project(dymon VERSION ...)` → `APP_VERSION`).
+CMake project (`CMakeLists.txt`, version is the single source of truth via `project(dymon VERSION ...)` → `APP_VERSION`). There is no test suite, linter, or `make test` target.
+
+### Linux
 
 ```bash
-# Native build (macOS/Linux). Binaries land in build/.
-cmake -B build
-cmake --build build --parallel
+cmake -B build/linux
+cmake --build build/linux --parallel
 ```
 
-Windows x64 is produced by cross-compiling from Linux with MinGW-w64, or natively with MinGW; both flows and the required linker flags are in `build.md`. Pushing a `v*` git tag triggers `.github/workflows/` to cross-compile and attach `dymon-windows-x64.zip` to a GitHub release.
+Binaries land in `build/linux/`.
 
-There is no test suite, linter, or `make test` target.
+### Windows x64 — cross-compile from Linux
+
+Requires `mingw-w64` (`sudo apt-get install mingw-w64`).
+
+```bash
+cmake -B build/win64 \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/mingw64-linux-cross-toolchain.cmake \
+    -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic"
+cmake --build build/win64 --parallel
+```
+
+### Windows x64 — native build on Windows
+
+With MinGW-w64 on `PATH`:
+
+```bat
+cmake -B build/win64 -G "MinGW Makefiles"
+cmake --build build/win64 --parallel
+```
+
+Binaries land in `build/win64/`. See `build.md` for toolchain file options and automated release details.
 
 ## Running locally without hardware
 

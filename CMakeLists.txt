@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.5)
-project(dymon VERSION 2.4.0)
+project(dymon VERSION 2.5.0)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=gnu++17")
 # -static-libgcc/-static-libstdc++ and the '-s' strip flag are GCC/MinGW
 # options that Apple Clang does not support (the static flags are a hard link
