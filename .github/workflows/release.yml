@@ -12,8 +12,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-tags: true
 
       - name: Install MinGW-w64
         run: sudo apt-get install -y mingw-w64
@@ -37,6 +35,8 @@ jobs:
       - name: Extract tag annotation
         id: tag_body
         run: |
+          # checkout only creates a lightweight tag; fetch the annotated tag object to get its message
+          git fetch --depth=1 --force origin "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
           {
             echo 'body<<EOF'
             git tag -l --format='%(contents)' ${{ github.ref_name }}
