@@ -127,10 +127,10 @@ Single-line braceless bodies are not allowed, even for trivial cases.
 2. Draft release notes: inspect `git log` since the last tag, come up with a proposal for what to include (new features, behaviour changes, fixes, breaking changes), and **ask the user to confirm or amend before proceeding**.
 3. Update `CHANGELOG.md` with the agreed release notes.
 4. Commit and push both files.
-5. Create an annotated tag whose message is the full, verbose release notes (this text becomes the GitHub release body), then push the tag:
+5. Create an annotated tag whose message is the full, verbose release notes (this text becomes the GitHub release body), then push the tag. `--cleanup=verbatim` is required: by default git strips lines starting with `#` as comments, which would remove the Markdown headings:
 
 ```bash
-git tag -a vx.y.z -m "$(cat <<'EOF'
+git tag -a --cleanup=verbatim vx.y.z -m "$(cat <<'EOF'
 ## Vx.y.z
 
 ### Feature or fix title
