@@ -87,6 +87,10 @@ int Dymon::print(const Bitmap * bitmap, double _labelLength1mm, int more)
       return -10;
    }
 
+   //a PBM row is padded to whole bytes. the printer expects the width to be a multiple of 8 (matching the row length in bytes)
+   const uint32_t bytesPerLine = (bitmap->width + 7) / 8;
+   const uint32_t width = 8 * bytesPerLine;
+
    if (lw450flavor)
    {
       //for the first label (after call to start) we have to send the configuration (like the label-length???, print-density, print-quality, media-type...)
@@ -103,7 +107,6 @@ int Dymon::print(const Bitmap * bitmap, double _labelLength1mm, int more)
       }
 
       //set bytes per line
-      const uint32_t bytesPerLine = bitmap->width / 8;
       buffer[0] = 0x1B;
       buffer[1] = 0x44; //bytes per line
       buffer[2] = (uint8_t)bytesPerLine;
@@ -157,10 +160,10 @@ int Dymon::print(const Bitmap * bitmap, double _labelLength1mm, int more)
       buffer[LABEL_HEIGHT_OFFSET + 2] = (uint8_t)(bitmap->height >> 16);
       buffer[LABEL_HEIGHT_OFFSET + 3] = (uint8_t)(bitmap->height >> 24);
       //set bitmap width
-      buffer[LABEL_WIDTH_OFFSET] = (uint8_t)bitmap->width;
-      buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(bitmap->width >> 8);
-      buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(bitmap->width >> 16);
-      buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(bitmap->width >> 24);
+      buffer[LABEL_WIDTH_OFFSET] = (uint8_t)width;
+      buffer[LABEL_WIDTH_OFFSET + 1] = (uint8_t)(width >> 8);
+      buffer[LABEL_WIDTH_OFFSET + 2] = (uint8_t)(width >> 16);
+      buffer[LABEL_WIDTH_OFFSET + 3] = (uint8_t)(width >> 24);
       status = this->send(buffer, sizeof(labelIndexHeightWidth), true);
       if (status <= 0) return -13;
 

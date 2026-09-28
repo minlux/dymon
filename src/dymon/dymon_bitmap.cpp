@@ -39,6 +39,23 @@ static int getFileContent(const char * filename, uint8_t * buffer, size_t buffer
 #endif
 
 
+//the padding bits at the end of each row (if width is not a multiple of 8) are "don't care" in PBM.
+//as the printer prints the full bytes, clear them to avoid a black stripe at the right border.
+static void clearPaddingBits(std::vector<uint8_t> & data, uint32_t width)
+{
+   const uint32_t padding = (8 - (width % 8)) % 8;
+   if (padding == 0)
+   {
+      return;
+   }
+   const uint32_t bytesPerLine = (width + 7) / 8;
+   const uint8_t mask = (uint8_t)(0xFF << padding);
+   for (size_t idx = bytesPerLine - 1; idx < data.size(); idx += bytesPerLine)
+   {
+      data[idx] &= mask;
+   }
+}
+
 Dymon::Bitmap Dymon::Bitmap::fromBytes(const uint8_t * buffer, uint32_t count)
 {
    Dymon::Bitmap bitmap;
@@ -108,6 +125,7 @@ Dymon::Bitmap Dymon::Bitmap::fromBytes(const uint8_t * buffer, uint32_t count)
             //copy the already buffered data
             std::vector<uint8_t> data(length); //allocate data buffer
             memcpy(data.data(), &buffer[i], length);
+            clearPaddingBits(data, width);
             bitmap.height = height;
             bitmap.width = width;
             bitmap.data = data;
@@ -213,6 +231,7 @@ Dymon::Bitmap Dymon::Bitmap::fromFile(const char * file)
             num += count;
          }
          data.resize(num);
+         clearPaddingBits(data, width);
          bitmap.height = height;
          bitmap.width = width;
          bitmap.data = data;
