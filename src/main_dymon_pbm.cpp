@@ -197,9 +197,9 @@ int main(int argc, char * argv[])
    {
       auto bitmap = Dymon::Bitmap::fromFile(bitmapFile);
       const int copies = (argCopies->count ? argCopies->ival[0] : 1);
-      for (int i = 0; i < copies; ++i) 
+      for (int i = 0; (i < copies) && (error == 0); ++i)
       {
-         dymon->print(&bitmap, 0, ((i+1) < copies));
+         error = dymon->print(&bitmap, 0, ((i+1) < copies));
       }
       dymon->end(); //finalize printing (form-feed) and close socket
    }

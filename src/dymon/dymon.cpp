@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <cstring>
 #include <iostream>
+#include <chrono>
+#include <thread>
 #include "dymon.h"
+
+
+#define _READY_POLL_INTERVAL_1MS    (250)    //interval to poll status while printer is not ready
+#define _READY_TIMEOUT_1MS          (5000)   //max. time to wait for printer to become ready
 
 
 extern "C" {
@@ -41,7 +47,30 @@ int Dymon::start(void * arg)
    }
 
    //request LabelWriter status (active)
-   return read_status(1);
+   //LW550: after power-on or wake-up from standby the printer is not ready for a short time.
+   //it then replies with status byte 0 = 4 (busy after wake-up) or 5 (lock not yet granted).
+   //print data sent in that state is discarded, but a blank label is fed out. so wait until it is ready.
+   for (uint32_t waited = 0; ; waited += _READY_POLL_INTERVAL_1MS)
+   {
+      int error = read_status(1);
+      if (error != 0)
+      {
+         this->close(); //just close, don't send the form-feed of end()
+         connected = false;
+         return error;
+      }
+      if (lw450flavor || ((this->status[0] != 4) && (this->status[0] != 5)))
+      {
+         return 0; //ready
+      }
+      if (waited >= _READY_TIMEOUT_1MS)
+      {
+         this->close(); //just close, don't send the form-feed of end()
+         connected = false;
+         return -5; //printer didn't become ready
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(_READY_POLL_INTERVAL_1MS));
+   }
 }
 
 
