@@ -20,6 +20,13 @@
 #define MSG_MORE 0
 #endif
 
+// MSG_NOSIGNAL (Linux) makes send() on a connection closed by the peer fail
+// with EPIPE instead of raising SIGPIPE (which would terminate the process).
+// macOS has no such flag; SO_NOSIGPIPE is set on the socket instead.
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 
 
 bool DymonNet::connect(void * arg)
@@ -68,6 +75,10 @@ bool DymonNet::connect(void * arg)
    recvTimeout.tv_sec = _SEND_RECV_TIMEOUT_1S;
    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(struct timeval));
    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(struct timeval));
+#ifdef SO_NOSIGPIPE
+   int noSigPipe = 1;
+   setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
+#endif
 
    //wait for connection, with timeout of 2 seconds
    struct timeval connectTimeout = { 0 };
@@ -94,7 +105,7 @@ bool DymonNet::connect(void * arg)
 int DymonNet::send(const uint8_t * data, const size_t dataLen, bool more)
 {
    //Send some data
-   int status = ::send(sockfd, data, dataLen, more ? MSG_MORE : 0);
+   int status = ::send(sockfd, data, dataLen, (more ? MSG_MORE : 0) | MSG_NOSIGNAL);
    if (status >= 0) //on success
    {
       return status;
