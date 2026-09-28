@@ -115,29 +115,5 @@
   </div>
   <script type="application/javascript" src="../js/qrcodegen.js"></script>
   <script type="module" src="script.js"></script>
-  <script>
-    function print() {
-      let format = document.getElementById('format').value; //selectedIndex
-      let width_height = format.split('x');
-      let width = parseInt(width_height[0]);
-      let height = parseInt(width_height[1]);
-      let orientation = (format.slice(-1) === 'R') ? 1 : 0;
-      //setup label
-      let label = {
-        'ip': document.getElementById('ip').value,
-        'width': width,
-        'height': height,
-        'orientation': orientation,
-        'text': document.getElementById('text').value,
-        'count': parseInt(document.getElementById('count').value) || 1,
-      };
-      // console.log(label);
-
-      //call REST API
-      let ajax = new XMLHttpRequest();
-      ajax.open('POST', '/labels');
-      ajax.send(JSON.stringify(label));
-    }
-  </script>
 </body>
 </html>
