@@ -127,6 +127,9 @@ int Dymon::print(const Bitmap * bitmap, double _labelLength1mm, int more)
       if (this->index == 0)
       {
          static const uint8_t configuration[] = {
+            0x1B, 0x51, 0, 0,      //(Q) undocumented, sent by DYMO driver at job start
+            0x1B, 0x42, 0,         //(B) dot tab = 0 (DYMO driver may leave a non-zero value behind)
+            // 0x1B, 0x4C, 0, 0,      //(L) label length = max. feed distance in dot lines to the next top-of-form hole (16-bit big endian, default 3058)
             0x1B, 0x65,            //(e) print density "normal" (LW450)
             0x1B, 0x68             //(h) print quality, 300x300dpi (text mode)
          };
