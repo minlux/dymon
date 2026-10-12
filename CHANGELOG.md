@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fix: unwanted left margin on LabelWriter 450 (#17)
+
+The DYMO driver changes the dot tab (`ESC B`, a left offset) per raster line,
+and the printer keeps the last value until it is reset or power-cycled. A
+dymon job printed after a DYMO driver job therefore inherited that offset
+and printed with a left margin. dymon now sends `ESC Q 0 0` and `ESC B 0` at
+the start of every job on LW450-class printers, as the DYMO driver does.
+
 ## V2.5.1
 
 ### Fix: wait for LabelWriter 550 to become ready (#16)
