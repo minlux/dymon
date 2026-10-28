@@ -1,6 +1,23 @@
 # Changelog
 
-## Unreleased
+## V2.6.0
+
+### dymon_srv: readable errors when started via a Windows shortcut
+
+When `dymon_srv` was started with a double-click or a desktop shortcut and
+failed (e.g. no USB DYMO found), its console window closed immediately and
+the error could not be read. On Windows, it now waits for a key press after
+an error if it owns its console window. Started from an existing console,
+it exits right away as before.
+
+Invalid command line arguments (e.g. a typo like `--prot 8090`) are no
+longer silently ignored: `dymon_srv` prints the error and the usage and
+exits with -1.
+
+A second instance on the same port is now refused with
+`Can't listen to port … (already in use?)` (exit code -3). Previously,
+both instances could bind the port silently. `Start listening to port …`
+is now printed only after the port was bound successfully.
 
 ### Fix: unwanted left margin on LabelWriter 450 (#17)
 
@@ -9,6 +26,15 @@ and the printer keeps the last value until it is reset or power-cycled. A
 dymon job printed after a DYMO driver job therefore inherited that offset
 and printed with a left margin. dymon now sends `ESC Q 0 0` and `ESC B 0` at
 the start of every job on LW450-class printers, as the DYMO driver does.
+
+### Web UI: 57x32 mm label format
+
+The labelwriter web UI (also served by `dymon_srv` at `/`) offers the
+57x32 mm label format.
+
+### Addon: testpattern
+
+New addon to generate PBM test labels.
 
 ## V2.5.1
 
