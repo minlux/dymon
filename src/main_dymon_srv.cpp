@@ -17,6 +17,10 @@
 #include "usbprint.h"
 #include "argtable3.h"
 #include "vt100.h"
+#ifdef _WIN32
+#include <windows.h>
+#include <conio.h>
+#endif
 
 /* -- Defines ------------------------------------------------------------- */
 #define APP_NAME "dymon_srv"
@@ -90,6 +94,20 @@ static void print_usage(void **argtable)
    arg_print_syntax(stdout, argtable, "\n\n");
 }
 
+// On Windows, keep the console window open after an error, if it was created just for this process
+// (e.g. when started via a desktop shortcut). Otherwise the window closes before the user can read the error.
+static void wait_on_error(void)
+{
+#ifdef _WIN32
+   DWORD pids[2];
+   if (GetConsoleProcessList(pids, 2) == 1)
+   {
+      cout << "\nPress any key to exit..." << endl;
+      _getch();
+   }
+#endif
+}
+
 static void print_help(void **argtable)
 {
    // Description
@@ -132,7 +150,7 @@ int main(int argc, char *argv[])
        };
 
    // Parse command line arguments.
-   arg_parse(argc, argv, argtable);
+   const int nerrors = arg_parse(argc, argv, argtable);
 
    // Help
    if (argHelp->count)
@@ -146,6 +164,17 @@ int main(int argc, char *argv[])
    {
       puts(APP_VERSION);
       return 0;
+   }
+
+   // Invalid arguments (e.g. a typo like '--prot 8090')
+   if (nerrors > 0)
+   {
+      fputs(VT100_RED "Error:" VT100_RESET " ", stdout);
+      arg_print_errors(stdout, argEnd, APP_NAME);
+      puts("");
+      print_usage(argtable);
+      wait_on_error();
+      return -1;
    }
 
 #ifdef _WIN32
@@ -168,6 +197,7 @@ int main(int argc, char *argv[])
    {
       puts(VT100_RED "Error:" VT100_RESET " Only one interface allowed (one of '--usb', '--net' or '--dir')\n");
       print_usage(argtable);
+      wait_on_error();
       return -1;
    }
 
@@ -192,6 +222,7 @@ int main(int argc, char *argv[])
       if (err != 0)
       {
          cout << "Can't find any USB connected DYMO" << endl;
+         wait_on_error();
          return -2;
       }
       path = devname;
@@ -210,8 +241,6 @@ int main(int argc, char *argv[])
    const uint16_t port = (uint16_t)(argPort->count ? argPort->ival[0] : 8092);
    cout << "Printserver for DYMO LabelWriter, by minlux. V" APP_VERSION "\n"
         << endl;
-   cout << "\nStart listening to port " << port << endl;
-   cout << "Press [Ctrl + C] to quit!" << endl;
 
    // Set the REST endpoints.
    // The respective GET endpoint serves a static site, that acts as a proxy.
@@ -240,8 +269,27 @@ int main(int argc, char *argv[])
       });
    }
 
+   // Don't share the port with another running instance.
+   // httplib's default (SO_REUSEPORT on Linux, SO_REUSEADDR on Windows) would allow that silently.
+   svr.set_socket_options([](socket_t sock) {
+      int yes = 1;
+#ifdef _WIN32
+      setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *)&yes, sizeof(yes));
+#else
+      setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+#endif
+   });
+
    // Start server
-   svr.listen("0.0.0.0", port);
+   if (!svr.bind_to_port("0.0.0.0", port))
+   {
+      cout << VT100_RED "Error:" VT100_RESET " Can't listen to port " << port << " (already in use?)" << endl;
+      wait_on_error();
+      return -3;
+   }
+   cout << "\nStart listening to port " << port << endl;
+   cout << "Press [Ctrl + C] to quit!" << endl;
+   svr.listen_after_bind();
    return 0;
 }
 
